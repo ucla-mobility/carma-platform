@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 LEIDOS.
+ * Copyright (C) 2019-2021 LEIDOS.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -17,15 +17,14 @@
 #ifndef __ARBITRATOR_INCLUDE_CAPABILITIES_INTERFACE_HPP__
 #define __ARBITRATOR_INCLUDE_CAPABILITIES_INTERFACE_HPP__
 
-#include <rclcpp/rclcpp.hpp>
-#include <carma_ros2_utils/carma_lifecycle_node.hpp>
+#include <ros/ros.h>
+#include <carma_utils/CARMAUtils.h>
 #include <vector>
 #include <map>
 #include <unordered_set>
 #include <string>
-#include <carma_planning_msgs/srv/plugin_list.hpp>
-#include <carma_planning_msgs/srv/get_plugin_api.hpp>
-
+#include <cav_srvs/PluginList.h>
+#include <cav_srvs/GetPluginApi.h>
 
 namespace arbitrator
 {
@@ -38,10 +37,10 @@ namespace arbitrator
         public:
             /**
              * \brief Constructor for Capabilities interface
-             * \param nh A CarmaLifecycleNode pointer this interface will work with
+             * \param nh A publically addressesed ("/") ros::NodeHandle
              */
-            CapabilitiesInterface(std::shared_ptr<carma_ros2_utils::CarmaLifecycleNode> nh): nh_(nh) {
-                sc_s_ = nh_->create_client<carma_planning_msgs::srv::GetPluginApi>("plugins/get_strategic_plugins_by_capability");
+            CapabilitiesInterface(ros::NodeHandle *nh): nh_(nh) {
+                sc_s = nh_->serviceClient<cav_srvs::GetPluginApi>("plugins/get_strategic_plugin_by_capability");
             };
 
             /**
@@ -62,32 +61,28 @@ namespace arbitrator
 
             /**
              * \brief Template function for calling all nodes which respond to a service associated
-             *      with a particular capability. Will send the service request to all nodes and 
+             *      with a particular capabilitiy. Will send the service request to all nodes and 
              *      aggregate the responses.
              * 
-             * \tparam MSrvReq The typename of the service message request
-             * \tparam MSrvRes The typename of the service message response
-             * 
+             * \tparam MSrv The typename of the service message
              * \param query_string The string name of the capability to look for
              * \param The message itself to send
              * \return A map matching the topic name that responded -> the response
              */
-            template<typename MSrvReq, typename MSrvRes>
-            std::map<std::string, std::shared_ptr<MSrvRes>> multiplex_service_call_for_capability(const std::string& query_string, std::shared_ptr<MSrvReq> msg);
-            
+            template<typename MSrv>
+            std::map<std::string, MSrv> multiplex_service_call_for_capability(std::string query_string, MSrv msg);
 
             const static std::string STRATEGIC_PLAN_CAPABILITY;
         protected:
         private:
-            std::shared_ptr<carma_ros2_utils::CarmaLifecycleNode> nh_;
+            ros::NodeHandle *nh_;
 
-            carma_ros2_utils::ClientPtr<carma_planning_msgs::srv::GetPluginApi> sc_s_;
+            ros::ServiceClient sc_s;
             std::unordered_set <std::string> capabilities_ ; 
 
 
             
     };
-
 };
 
 #include "capabilities_interface.tpp"

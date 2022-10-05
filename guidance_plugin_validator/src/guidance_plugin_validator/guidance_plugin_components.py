@@ -31,7 +31,7 @@ class StrategicPluginResults:
         self.plugin_name = plugin_name
         
         # Set the plugin's node name
-        if plugin_name == "route_following_plugin":
+        if plugin_name == "RouteFollowing":
             self.node_name = "/guidance/route_following_plugin"
         else:
             rospy.logerr("ERROR: Unknown node for Strategic Plugin: " + str(self.plugin_name))
@@ -158,13 +158,15 @@ class TacticalPluginResults:
         self.plugin_name = plugin_name
         
         # Set the plugin's node name
-        if plugin_name == "inlanecruising_plugin":
+        if plugin_name == "InLaneCruisingPlugin":
             self.node_name = "/guidance/inlanecruising_plugin"
-        elif plugin_name == "stop_and_wait_plugin":
+        elif plugin_name == "StopandWaitPlugin":
             self.node_name = "/guidance/stop_and_wait_plugin"
-        elif plugin_name == "cooperative_lanechange":
+        elif plugin_name == "CooperativeLaneChangePlugin":
             self.node_name = "/guidance/cooperative_lanechange"
-        elif plugin_name == "yield_plugin":
+        elif plugin_name == "UnobstructedLaneChangePlugin":
+            self.node_name = "/guidance/unobstructed_lanechange"
+        elif plugin_name == "YieldPlugin":
             self.node_name = "/guidance/yield_plugin"
         else:
             rospy.logerr("ERROR: Unknown node for Tactical Plugin: " + str(self.plugin_name))
@@ -291,9 +293,9 @@ class ControlPluginResults:
         self.plugin_name = plugin_name
         
         # Set the plugin's node name and plugin_discovery capability
-        if plugin_name == "pure_pursuit_wrapper_node":
+        if plugin_name == "Pure Pursuit":
             self.node_name = "/guidance/pure_pursuit_wrapper_node"
-            self.capability = "control/trajectory_control"
+            self.capability = "control_pure_pursuit_plan/plan_controls"
             self.plan_trajectory_topic = "/guidance/pure_pursuit/plan_trajectory"
         else:
             rospy.logerr("ERROR: Unknown node for Control Plugin: " + str(self.plugin_name))

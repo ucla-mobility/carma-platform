@@ -1,3 +1,0 @@
-# Double: The rate at which the Guidance Node will process message
-# Units: hz
-spin_rate_hz: 10.0

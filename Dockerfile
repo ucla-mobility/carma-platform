@@ -33,20 +33,20 @@
 # Stage 1 - Acquire the CARMA source as well as any extra packages
 # /////////////////////////////////////////////////////////////////////////////
 
-FROM usdotfhwastoldev/autoware.ai:develop AS base-image
+FROM 19dbb64ec4ed AS base-image
 
-FROM base-image AS source-code
+FROM 19dbb64ec4ed AS source-code
 
 RUN mkdir ~/src
 COPY --chown=carma . /home/carma/src/carma-platform/
-RUN ~/src/carma-platform/docker/checkout.bash
+# RUN ~/src/carma-platform/docker/checkout.bash
 
 # /////////////////////////////////////////////////////////////////////////////
 # Stage 2 - Build and install the software 
 # /////////////////////////////////////////////////////////////////////////////
 
 
-FROM base-image AS install
+FROM 19dbb64ec4ed AS install
 ARG ROS1_PACKAGES=""
 ENV ROS1_PACKAGES=${ROS1_PACKAGES}
 ARG ROS2_PACKAGES=""
@@ -63,7 +63,7 @@ RUN ~/carma_ws/src/carma-platform/docker/install.sh
 # /////////////////////////////////////////////////////////////////////////////
 
 
-FROM base-image
+FROM 19dbb64ec4ed
 
 ARG BUILD_DATE="NULL"
 ARG VCS_REF="NULL"

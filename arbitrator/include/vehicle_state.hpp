@@ -2,7 +2,7 @@
 #define __ARBITRATOR_INCLUDE_VEHICLE_STATE_HPP__
 
 /*
- * Copyright (C) 2022 LEIDOS.
+ * Copyright (C) 2021 LEIDOS.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -18,7 +18,6 @@
  */
 
 #include <lanelet2_core/Forward.h>
-#include <rclcpp/rclcpp.hpp>
 
 namespace arbitrator
 {
@@ -27,7 +26,7 @@ namespace arbitrator
  */
 struct VehicleState
 {
-  rclcpp::Time stamp;                         // Time stamp of position data used to populate struct
+  ros::Time stamp;                         // Time stamp of position data used to populate struct
   double x = 0;                            // Vehicle x axis position in map frame (m)
   double y = 0;                            // Vehicle y axis position in map frame (m)
   double downtrack = 0;                    // Vehicle route downtrack (m)

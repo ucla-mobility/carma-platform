@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 LEIDOS.
+ * Copyright (C) 2019-2021 LEIDOS.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -17,12 +17,10 @@
 #ifndef __ARBITRATOR_INCLUDE_COST_SYSTEM_COST_FUNCTION_HPP__
 #define __ARBITRATOR_INCLUDE_COST_SYSTEM_COST_FUNCTION_HPP__
 
-#include <rclcpp/rclcpp.hpp>
+#include <ros/ros.h>
+#include "cost_function.hpp"
 #include <map>
 #include <string>
-#include <carma_ros2_utils/carma_lifecycle_node.hpp>
-
-#include "cost_function.hpp"
 
 namespace arbitrator
 {
@@ -49,7 +47,7 @@ namespace arbitrator
              * 
              * \param nh A publicly namespaced nodehandle
              */
-            void init(std::shared_ptr<carma_ros2_utils::CarmaLifecycleNode> nh);
+            void init(ros::NodeHandle &nh);
 
             /**
              * \brief Compute the unit cost over distance of a given maneuver plan
@@ -58,7 +56,7 @@ namespace arbitrator
              * 
              * \throws std::logic_error if not initialized
              */
-            double compute_total_cost(const carma_planning_msgs::msg::ManeuverPlan& plan);
+            double compute_total_cost(const cav_msgs::ManeuverPlan& plan);
 
             /**
              * \brief Compute the unit cost over distance of a given maneuver plan
@@ -66,9 +64,9 @@ namespace arbitrator
              * \return double The total cost divided by the total distance of the plan
              * \throws std::logic_error if not initialized
              */
-            double compute_cost_per_unit_distance(const carma_planning_msgs::msg::ManeuverPlan& plan);
+            double compute_cost_per_unit_distance(const cav_msgs::ManeuverPlan& plan);
         private:
-            carma_ros2_utils::ClientPtr<carma_planning_msgs::srv::ComputePlanCost> cost_system_sc_; 
+            ros::ServiceClient cost_system_sc_;
             bool initialized_ = false;
     };
 };

@@ -225,55 +225,55 @@ namespace health_monitor
            else if(starting_up_ && (time_now - start_up_timestamp <= start_duration))
             {
                 alert.description = "System is starting up...";
-                alert.type = cav_msgs::SystemAlert::NOT_READY;
+                alert.type = cav_msgs::SystemAlert::DRIVERS_READY;
                 return alert;
             }
              else if(status.compare("s_1_l1_1_l2_1_g_1_c_0")==0)
             {
                 alert.description = "Camera Failed";
-                alert.type = cav_msgs::SystemAlert::SHUTDOWN;
+                alert.type = cav_msgs::SystemAlert::DRIVERS_READY;
             }
             else if((status.compare("s_1_l1_0_l2_1_g_1") == 0) || (status.compare("s_1_l1_1_l2_0_g_1") == 0))
             {
             
                 alert.description = "One LIDAR Failed";
-                alert.type = cav_msgs::SystemAlert::CAUTION;
+                alert.type = cav_msgs::SystemAlert::DRIVERS_READY;
                 return alert;
             }
             else if((status.compare("s_1_l1_0_l2_1_g_0") == 0) || (status.compare("s_1_l1_1_l2_0_g_0") == 0))
             {   
                 alert.description = "One Lidar and GPS Failed";
-                alert.type = cav_msgs::SystemAlert::CAUTION;
+                alert.type = cav_msgs::SystemAlert::DRIVERS_READY;
                 return alert;
             } 
             else if(status.compare("s_1_l1_1_l2_1_g_0") == 0)
             {
                 alert.description = "GPS Failed";
-                alert.type = cav_msgs::SystemAlert::CAUTION;
+                alert.type = cav_msgs::SystemAlert::DRIVERS_READY;
                 return alert;
             }
             else if(status.compare("s_1_l1_0_l2_0_g_1") == 0)
             {
                 alert.description = "Both LIDARS Failed";
-                alert.type = cav_msgs::SystemAlert::WARNING;
+                alert.type = cav_msgs::SystemAlert::DRIVERS_READY;
                 return alert;
             }
             else if(status.compare("s_1_l1_0_l2_0_g_0") == 0)
             {
                 alert.description = "LIDARS and GPS Failed";
-                alert.type = cav_msgs::SystemAlert::SHUTDOWN;
+                alert.type = cav_msgs::SystemAlert::DRIVERS_READY;
                 return alert;
             }
             else if(status.compare("s_0") == 0)
             {
                 alert.description = "SSC Failed";
-                alert.type = cav_msgs::SystemAlert::SHUTDOWN;
+                alert.type = cav_msgs::SystemAlert::DRIVERS_READY;
                 return alert;
             }
             else
             {
                 alert.description = "Unknown problem assessing essential driver availability";
-                alert.type = cav_msgs::SystemAlert::FATAL;
+                alert.type = cav_msgs::SystemAlert::DRIVERS_READY;
                 return alert;  
             }
  
@@ -291,63 +291,63 @@ namespace health_monitor
             else if(starting_up_ && (time_now - start_up_timestamp <= start_duration))
             {
                 alert.description = "System is starting up...";
-                alert.type = cav_msgs::SystemAlert::NOT_READY;
+                alert.type = cav_msgs::SystemAlert::DRIVERS_READY;
                 return alert; 
             }
             
             else if(status.compare("s_1_l_1_g_1_c_0") == 0)
             {
                 alert.description = "Camera Failed";
-                alert.type = cav_msgs::SystemAlert::SHUTDOWN;
+                alert.type = cav_msgs::SystemAlert::DRIVERS_READY;
                 return alert;
             } 
             else if(status.compare("s_1_l_1_g_0") == 0)
             {
                 alert.description = "GPS Failed";
-                alert.type = cav_msgs::SystemAlert::CAUTION;
+                alert.type = cav_msgs::SystemAlert::DRIVERS_READY;
                 return alert; 
             }
             else if(status.compare("s_1_l_0_g_1") == 0)
             {
                 alert.description = "LIDAR Failed";
-                alert.type = cav_msgs::SystemAlert::WARNING;
+                alert.type = cav_msgs::SystemAlert::DRIVERS_READY;
                 return alert; 
             }
             else if(status.compare("s_1_l_0_g_0") == 0)
             {
                 alert.description = "LIDAR, GPS Failed";
-                alert.type = cav_msgs::SystemAlert::SHUTDOWN;
+                alert.type = cav_msgs::SystemAlert::DRIVERS_READY;
                 return alert; 
             }
             else if(status.compare("s_1_l_0_g_1_c_0") == 0)
             {
                 alert.description = "LIDAR, Camera Failed";
-                alert.type = cav_msgs::SystemAlert::SHUTDOWN;
+                alert.type = cav_msgs::SystemAlert::DRIVERS_READY;
                 return alert;
             }
             else if(status.compare("s_1_l_1_g_0_c_0") == 0)
             {
                 alert.description = " GPS, Camera Failed";
-                alert.type = cav_msgs::SystemAlert::SHUTDOWN;
+                alert.type = cav_msgs::SystemAlert::DRIVERS_READY;
                 return alert;
             }
             else if(status.compare("s_0") == 0)
             {
                 alert.description = "SSC Failed";
-                alert.type = cav_msgs::SystemAlert::SHUTDOWN;
+                alert.type = cav_msgs::SystemAlert::DRIVERS_READY;
                 return alert; 
             }
             else
             {
                 alert.description = "Unknown problem assessing essential driver availability";
-                alert.type = cav_msgs::SystemAlert::FATAL;
+                alert.type = cav_msgs::SystemAlert::DRIVERS_READY;
                 return alert;  
             }
         }
         else
         {
             alert.description = "Need to set either truck or car flag";
-            alert.type = cav_msgs::SystemAlert::FATAL;
+            alert.type = cav_msgs::SystemAlert::DRIVERS_READY;
             return alert; 
         }
     }

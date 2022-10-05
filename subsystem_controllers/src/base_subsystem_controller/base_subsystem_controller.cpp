@@ -76,7 +76,7 @@ namespace subsystem_controllers
         alert.type = carma_msgs::msg::SystemAlert::FATAL;
         alert.description = base_config_.subsystem_namespace + " subsytem has failed with error: " + msg->description;
         alert.source_node =  get_node_base_interface()->get_fully_qualified_name();
-        publish_system_alert(alert);
+        // publish_system_alert(alert);
 
         // TODO: It might be worth trying to deactivate or shutdown after alerting the larger system, 
         //       but not clear on if that will increase instability of shutdown process
@@ -143,10 +143,6 @@ namespace subsystem_controllers
     }
     
 
-    if (!trigger_managed_nodes_configure_from_base_class_) {
-      return CallbackReturn::SUCCESS;
-    }
-
     // With all of our managed nodes now being tracked we can execute their configure operations
     bool success = lifecycle_mgr_.configure(std_msec(base_config_.service_timeout_ms), std_msec(base_config_.call_timeout_ms)).empty();
 
@@ -168,10 +164,6 @@ namespace subsystem_controllers
   {
     RCLCPP_INFO_STREAM(get_logger(), "Subsystem trying to activate");
 
-    if (!trigger_managed_nodes_activate_from_base_class_) {
-      return CallbackReturn::SUCCESS;
-    }
-
     bool success = lifecycle_mgr_.activate(std_msec(base_config_.service_timeout_ms), std_msec(base_config_.call_timeout_ms)).empty();
 
     if (success)
@@ -192,10 +184,6 @@ namespace subsystem_controllers
   {
     RCLCPP_INFO_STREAM(get_logger(), "Subsystem trying to deactivate");
 
-    if (!trigger_managed_nodes_deactivate_from_base_class_) {
-      return CallbackReturn::SUCCESS;
-    }
-
     bool success = lifecycle_mgr_.deactivate(std_msec(base_config_.service_timeout_ms), std_msec(base_config_.call_timeout_ms)).empty();
 
     if (success)
@@ -215,10 +203,6 @@ namespace subsystem_controllers
   carma_ros2_utils::CallbackReturn BaseSubsystemController::handle_on_cleanup(const rclcpp_lifecycle::State &)
   {
     RCLCPP_INFO_STREAM(get_logger(), "Subsystem trying to cleanup");
-
-    if (!trigger_managed_nodes_cleanup_from_base_class_) {
-      return CallbackReturn::SUCCESS;
-    }
 
     bool success = lifecycle_mgr_.cleanup(std_msec(base_config_.service_timeout_ms), std_msec(base_config_.call_timeout_ms)).empty();
 

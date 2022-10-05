@@ -110,6 +110,10 @@ namespace <SUB><package_name>
     return true; // TODO for user implement actual check on availability if applicable to plugin
   }
 
+  std::string Node::get_plugin_name() {
+    return "TODO for user specify plugin name here";
+  }
+
   std::string Node::get_version_id() {
     return "TODO for user specify plugin version id here";
   }

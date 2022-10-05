@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 LEIDOS.
+ * Copyright (C) 2019-2021 LEIDOS.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -14,21 +14,16 @@
  * the License.
  */
 
-#include <rclcpp/rclcpp.hpp>
+#include <ros/ros.h>
 
-#include <stop_controlled_intersection_plugin.hpp>
+#include <stop_controlled_intersection_plugin_node.h>
 
 int main(int argc, char** argv)
 {
-  rclcpp::init(argc, argv);
-
-  auto node = std::make_shared<stop_controlled_intersection_tactical_plugin::StopControlledIntersectionTacticalPlugin>(rclcpp::NodeOptions());
   
-  rclcpp::executors::MultiThreadedExecutor executor;
-  executor.add_node(node->get_node_base_interface());
-  executor.spin();
-  rclcpp::shutdown();
+    ros::init(argc, argv, "stop_controlled_intersection_tactical_plugin");
+    stop_controlled_intersection_transit_plugin::StopControlledIntersectionTransitPluginNode sc;
+    sc.run();
+    return 0;
 
-  return 0;
 };
-

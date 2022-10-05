@@ -34,7 +34,7 @@ namespace bsm_generator
         public:
 
             /**
-             * \brief Default Constructor for BSMGeneratorWorker
+             * \brief Constructor for BSMGeneratorWorker
              */
             BSMGeneratorWorker();
 
@@ -49,10 +49,9 @@ namespace bsm_generator
              * \brief Function to obtain the current BSM message ID. The ID is updated to a new random BSM 
              * message ID every 5 minutes.
              * \param now The current time
-             * \param secs Id change period in sec
              * \return The current BSM message ID
              */
-            std::vector<uint8_t> getMsgId(const rclcpp::Time now, double secs);
+            std::vector<uint8_t> getMsgId(const rclcpp::Time now);
 
             /**
              * \brief Function to obtain the 'milliseconds' mark of the provided time within the last minute
@@ -109,8 +108,6 @@ namespace bsm_generator
             float getHeadingInRange(const float heading);
 
         private:
-            // Random number generator for BSM id
-            std::default_random_engine generator_;
 
             // BSM message counter value
             uint8_t msg_count_ {0};

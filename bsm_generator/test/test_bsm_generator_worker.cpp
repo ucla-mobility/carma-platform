@@ -39,11 +39,11 @@ TEST(BSMWorkerTest, testMsgId)
 {
     bsm_generator::BSMGeneratorWorker worker;
     rclcpp::Time time1(10, 0);
-    std::vector<uint8_t> msgId1 = worker.getMsgId(time1, 300.0);
+    std::vector<uint8_t> msgId1 = worker.getMsgId(time1);
     rclcpp::Time time2(11, 0);
-    std::vector<uint8_t> msgId2 = worker.getMsgId(time2, 300.0);
+    std::vector<uint8_t> msgId2 = worker.getMsgId(time2);
     rclcpp::Time time3(310, 0);
-    std::vector<uint8_t> msgId3 = worker.getMsgId(time3, 300.0);
+    std::vector<uint8_t> msgId3 = worker.getMsgId(time3);
     EXPECT_TRUE(msgId1 == msgId2);
     EXPECT_TRUE(msgId2 != msgId3);
 }

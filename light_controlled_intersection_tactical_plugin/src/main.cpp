@@ -14,20 +14,16 @@
  * the License.
  */
 
-#include <rclcpp/rclcpp.hpp>
-#include "light_controlled_intersection_tactical_plugin/light_controlled_intersection_tactical_plugin_node.hpp"
+#include <ros/ros.h>
 
-int main(int argc, char **argv) 
+#include <light_controlled_intersection_plugin_node.h>
+
+int main(int argc, char** argv)
 {
-  rclcpp::init(argc, argv);
-
-  auto node = std::make_shared<light_controlled_intersection_tactical_plugin::LightControlledIntersectionTransitPluginNode>(rclcpp::NodeOptions());
   
-  rclcpp::executors::MultiThreadedExecutor executor;
-  executor.add_node(node->get_node_base_interface());
-  executor.spin();
+    ros::init(argc, argv, "light_controlled_intersection_tactical_plugin");
+    light_controlled_intersection_transit_plugin::LightControlledIntersectionTransitPluginNode sc;
+    sc.run();
+    return 0;
 
-  rclcpp::shutdown();
-
-  return 0;
-}
+};

@@ -118,7 +118,7 @@ namespace subsystem_controllers
 
     // Publish the alert
     output_alert.source_node =  get_node_base_interface()->get_fully_qualified_name();
-    publish_system_alert(output_alert);
+    // publish_system_alert(output_alert);
   }
 
   std::unordered_map<std::vector<SensorBooleanStatus>, SensorAlertStatus, VectorHash> LocalizationControllerNode::sensor_fault_map_from_json(std::string json_string) {

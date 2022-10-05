@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 LEIDOS.
+ * Copyright (C) 2019-2021 LEIDOS.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -14,20 +14,16 @@
  * the License.
  */
 
-#include <rclcpp/rclcpp.hpp>
-#include <inlanecruising_plugin/inlanecruising_plugin_node.hpp>
+#include <ros/ros.h>
 
-int main(int argc, char **argv) 
+#include <inlanecruising_plugin/inlanecruising_plugin_node.h>
+
+int main(int argc, char** argv)
 {
-  rclcpp::init(argc, argv);
-
-  auto node = std::make_shared<inlanecruising_plugin::InLaneCruisingPluginNode>(rclcpp::NodeOptions());
   
-  rclcpp::executors::MultiThreadedExecutor executor;
-  executor.add_node(node->get_node_base_interface());
-  executor.spin();
+    ros::init(argc, argv, "inlanecruising_plugin");
+    inlanecruising_plugin::InLaneCruisingPluginNode ip;
+    ip.run();
+    return 0;
 
-  rclcpp::shutdown();
-
-  return 0;
-}
+};
