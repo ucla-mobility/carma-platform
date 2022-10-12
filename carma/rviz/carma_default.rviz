@@ -608,7 +608,7 @@ Visualization Manager:
       Marker Topic: /guidance/next_target_mark
       Name: Marker
       Namespaces:
-        next_target_marker: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -628,7 +628,7 @@ Visualization Manager:
       Marker Topic: /guidance/trajectory_visualizer
       Name: MarkerArray
       Namespaces:
-        trajectory_visualizer: true
+        {}
       Queue Size: 10
       Value: true
     - Class: rviz/Marker
@@ -652,7 +652,7 @@ Visualization Manager:
       Marker Topic: /guidance/host_marker
       Name: Host MobilityPath Marker
       Namespaces:
-        mobilitypath_visualizer: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -786,7 +786,7 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Angle: -5.495002746582031
+      Angle: -5.720003128051758
       Class: rviz/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
@@ -796,10 +796,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: -26.27568817138672
+      Scale: 15.713997840881348
       Target Frame: host_vehicle
-      X: 11.32992172241211
-      Y: 6.202162742614746
+      X: 13.006630897521973
+      Y: -1.2709459066390991
     Saved: ~
 Window Geometry:
   Camera:
@@ -822,4 +822,4 @@ Window Geometry:
     collapsed: true
   Width: 1386
   X: 534
-  Y: 72
+  Y: 27

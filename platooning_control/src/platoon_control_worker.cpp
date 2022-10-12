@@ -45,6 +45,11 @@ namespace platoon_control
 		current_pose_ = msg.pose;
 	}
 
+    void PlatoonControlWorker::setEmergencyStopFlag(bool flag)
+    {
+        emergency_stop_flag_=flag;
+    }
+
     void PlatoonControlWorker::generateSpeed(const cav_msgs::TrajectoryPlanPoint& point)
     {
         double speed_cmd = 0;
@@ -94,7 +99,7 @@ namespace platoon_control
 
         }
 
-        else if (leader.staticId == ctrl_config_.vehicleID)
+        else if (true)//hard coded for temp emergency stop 
         {
             ROS_DEBUG_STREAM("Host vehicle is the leader");
             speed_cmd = currentSpeed;
@@ -136,9 +141,17 @@ namespace platoon_control
                 ROS_DEBUG_STREAM("The speed command after max accel cap is: " << speed_cmd << " m/s");
         }
 
-        speedCmd_ = speed_cmd;
+        if (!emergency_stop_flag_)
+        {
+            speedCmd_ = speed_cmd;
+            lastCmdSpeed = speedCmd_;
+        }
+        else
+        {
+            speedCmd_ = 0;
+            lastCmdSpeed = 0;
+        }
 
-        lastCmdSpeed = speedCmd_;
 
     }
 
@@ -148,8 +161,16 @@ namespace platoon_control
         pp_.velocity_ = currentSpeed;
 
         pp_.calculateSteer(point);
-    	steerCmd_ = pp_.getSteeringAngle(); 
-        angVelCmd_ = pp_.getAngularVelocity();
+        
+        if (!emergency_stop_flag_)
+        {
+            steerCmd_ = pp_.getSteeringAngle(); 
+            angVelCmd_ = pp_.getAngularVelocity();
+        }else
+        {
+            steerCmd_=0;
+            angVelCmd_=0;
+        }
     }
 
     // TODO get the actual leader from strategic plugin

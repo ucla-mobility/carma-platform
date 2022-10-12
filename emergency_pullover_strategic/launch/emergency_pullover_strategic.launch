@@ -24,7 +24,7 @@ UCLA: Update node name, type, and package name accordingly.
  
 -->
 <launch>
-  <node name="emergency_pullover_strategic" pkg="emergency_pullover_strategic" type="emergency_pullover_strategic" output="screen">
+  <node name="emergency_pullover_strategic" pkg="emergency_pullover_strategic" type="emergency_pullover_strategic">
       <rosparam command="load" file="$(find emergency_pullover_strategic)/config/parameters.yaml" />
     </node>
 </launch>

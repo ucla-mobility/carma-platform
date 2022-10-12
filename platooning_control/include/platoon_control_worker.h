@@ -99,6 +99,8 @@ namespace platoon_control
         */
         void setCurrentSpeed(double speed);
 
+        void setEmergencyStopFlag(bool flag);
+
         // Member Variables
         double speedCmd = 0;
         double currentSpeed = 0;
@@ -118,6 +120,8 @@ namespace platoon_control
 
 		// geometry pose
         geometry_msgs::Pose current_pose_;
+
+        bool emergency_stop_flag_ = false;
 
 
     private:

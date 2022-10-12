@@ -46,6 +46,7 @@
 #include <cav_msgs/ExternalObjectList.h>
 #include <cav_msgs/RoadwayObstacle.h>
 #include <cav_msgs/RoadwayObstacleList.h>
+#include <cav_msgs/Route.h>
 #include "emergency_pullover_strategic_config.h"
 
 #include <cav_msgs/PlanType.h>
@@ -61,10 +62,14 @@
 #include <lanelet2_extension/projection/local_frame_projector.h>
 #include <std_msgs/String.h>
 #include <carma_wm/TrafficControl.h>
+#include <std_msgs/Bool.h>
+
 
 namespace emergency_pullover_strategic
 {
     using PublishPluginDiscoveryCB = std::function<void(const cav_msgs::Plugin&)>;
+    using StopVehicleCB = std::function<void(const std_msgs::Bool&)>;
+
     class EmergencyPulloverStrategicPlugin
     {
         public: 
@@ -81,7 +86,8 @@ namespace emergency_pullover_strategic
             */ 
             EmergencyPulloverStrategicPlugin(carma_wm::WorldModelConstPtr wm, 
                                              EmergencyPulloverStrategicPluginConfig config,
-                                             PublishPluginDiscoveryCB plugin_discovery_publisher);
+                                             PublishPluginDiscoveryCB plugin_discovery_publisher,
+                                             StopVehicleCB stop_vehicle_publisher);
 
             /**
             * \brief Callback for the georeference
@@ -130,7 +136,19 @@ namespace emergency_pullover_strategic
             * 
             * \param msg Latest ObjectList msg
             */
+            void route_cb(const cav_msgs::RouteConstPtr& route_msg);
+            
+            /**
+            * \brief Callback for the the object detection result list, category: external
+            * 
+            * \param msg Latest ObjectList msg
+            */
             void external_objects_cb(const cav_msgs::ExternalObjectListConstPtr& msg);
+
+            /**
+             * subscribe to lane change finish flag
+            */
+            void lane_change_finish_manual_cb(const std_msgs::BoolConstPtr& msg );
 
             /**
             * \brief Callback for the the object detection result list, category: roadway
@@ -217,13 +235,19 @@ namespace emergency_pullover_strategic
             // ECEF position of the detected emergency vehicle
             cav_msgs::LocationECEF emergency_ecef_location_;
 
+            // All lanelets within the current route
+            cav_msgs::Route route_msg_;
+
             // speed below which will be considered as stop, non-zero value allows for sensor noise
             const double STOPPED_SPEED = 0.5; // m/s
 
         private: 
 
-            // private global variables 
+            // publish plugin discovery call back
             PublishPluginDiscoveryCB plugin_discovery_publisher_;
+
+            // publish stop vehicle call back
+            StopVehicleCB stop_vehicle_publisher_;
             
             // pointer to the actual wm object
             carma_wm::WorldModelConstPtr wm_;
@@ -241,16 +265,27 @@ namespace emergency_pullover_strategic
             geometry_msgs::PoseStamped pose_msg_;
 
             // Current vehicle downtrack distance in route, m
-            double current_downtrack_ = 0;
+            double current_downtrack_ = 0.0;
+
+            bool lane_change_finished_manual = false;
 
             // Current vehicle crosstrack distance in route, m
-            double current_crosstrack_ = 0;
+            double current_crosstrack_ = 0.0;
 
             // Current vehicle command speed, m/s
-            double cmd_speed_ = 0;
+            double cmd_speed_ = 0.0;
 
             // Current vehicle measured speed, m/s
-            double current_speed_ = 0;
+            double current_speed_ = 0.0;
+
+            // mark the lane change starting point ecef
+            cav_msgs::LocationECEF lane_change_start_ecef_;
+            
+            // cross-track distance to the beginning point of the lane change
+            double ctd_to_lane_change_start_point_ = 0.0;
+
+            // down-track distance to the beginning point of the lane change
+            double dtd_to_lane_change_start_point_ = 0.0;
 
             // boolean indicator of whether a emergency vehicle is detected (initiated as false)
             bool not_emergency_vehicle_detected_ = true;
@@ -262,7 +297,13 @@ namespace emergency_pullover_strategic
             std::string emergency_vehicle_id_ = "default_emergency_vehicle_ID";
 
             // boolean indicator of whether the host has changed lane to the right 
-            bool is_host_pulled_over_ = false; 
+            bool is_pull_over_initiated = false; 
+
+            // boolean indicator of lane change status
+            bool lane_change_finished_ = false;
+
+            // lane change finish point downtrack distance
+            double lane_change_finish_dtd_ = 0.0;
 
 
             /**

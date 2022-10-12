@@ -35,9 +35,11 @@ namespace emergency_pullover_strategic
     // -------------------------------- Plug-in constructor --------------------------------
     EmergencyPulloverStrategicPlugin::EmergencyPulloverStrategicPlugin(carma_wm::WorldModelConstPtr wm, 
                                                                        EmergencyPulloverStrategicPluginConfig config,
-                                                                       PublishPluginDiscoveryCB plugin_discovery_publisher
+                                                                       PublishPluginDiscoveryCB plugin_discovery_publisher,
+                                                                       StopVehicleCB stop_vehicle_publisher
                                                                        ):
     plugin_discovery_publisher_(plugin_discovery_publisher),
+    stop_vehicle_publisher_(stop_vehicle_publisher),
     wm_(wm),
     config_(config)
     {
@@ -128,6 +130,12 @@ namespace emergency_pullover_strategic
         }
     }
 
+    // twist command, read linear speed on x direction, in m/s.
+    void EmergencyPulloverStrategicPlugin::route_cb(const cav_msgs::RouteConstPtr& msg)
+    {
+        route_msg_ = cav_msgs::Route(*msg.get());
+    }
+
     // Find the speed limit for the current road (also used as the desired speed).
     double EmergencyPulloverStrategicPlugin::findSpeedLimit(const lanelet::ConstLanelet& llt)
     {
@@ -162,8 +170,6 @@ namespace emergency_pullover_strategic
         lanelet::BasicPoint2d output {map_point.x(), map_point.y()};
         return output;
     } 
-
-    // note: consider add a function for emergency lane change state 
     
     // -------------------------------- Helper functions --------------------------------
 
@@ -174,70 +180,45 @@ namespace emergency_pullover_strategic
          * Note: 
          * This function is called in the emergency pullover strategic plugin node, which is running consistently with the node. 
          * So, it is necessary to check for the already detected emergency vehicle. Once detected, host vehicle should
-         *  stop searching and send lane change plan right away.
+         *  stop searching and send lane change plan right away. It is assumed only one emergency vehicle will appear.
          */
-        
-        ROS_DEBUG_STREAM("external_objects_callback called");
         
         // loop through objects to check for emergency vehicle 
         for (auto obj : msg->objects) 
         {
-            ROS_DEBUG_STREAM("external_objects_callback detect emergency vehicle");
-            // found emergency vehicle 
-            // if (obj.object_type == cav_msgs::ExternalObject::LARGE_VEHICLE)
-            // todo: use "large vehicle" for compilation, need to update perception message and add "emergency vehicle" type.
+            // Note: add "emergency vehicle" type to cav_msgs/external_object
             if (obj.object_type == cav_msgs::ExternalObject::EMERGENCY_VEHICLE)
             {
                 // first time detect 
                 if (not_emergency_vehicle_detected_) 
                 {
-                    // note: inherithed from gnss to map converter, currently the covariance is not used
-                    // init a new msg to handle data type
-                    geometry_msgs::PoseStamped msg;  // note: obj.pose is of type PoseWithCovariance
-                    geometry_msgs::PoseWithCovariance pose_msg = obj.pose;
-                    msg.pose = pose_msg.pose;
-                    
-                    // update emergency vehicle 
-                    emergency_vehicle_pose_ = msg;
-                    // update emergency vehicle ID
-                    emergency_vehicle_id_ = obj.id;
-                    
-                    // update bool indicator
+                    // update bool indicator if 1st detected
                     not_emergency_vehicle_detected_ = false;
-                    return;
                 }
-                // repeated detection 
-                else
-                {
-                    // note: inherithed from gnss to map converter, currently the covariance is not used
-                    // init a new msg to handle data type
-                    geometry_msgs::PoseStamped msg;  // note: obj.pose is of type PoseWithCovariance
-                    geometry_msgs::PoseWithCovariance pose_msg = obj.pose;
-                    msg.pose = pose_msg.pose;
-                    
-                    // update emergency vehicle 
-                    emergency_vehicle_pose_ = msg;
-                    return;
-                }
+
+                // init a new msg to handle data type
+                geometry_msgs::PoseStamped msg;
+                geometry_msgs::PoseWithCovariance pose_msg = obj.pose;
+                msg.pose = pose_msg.pose;
+                
+                // update emergency vehicle 
+                emergency_vehicle_pose_ = msg;
+                // update emergency vehicle ID
+                emergency_vehicle_id_ = obj.id;
+                
+                return;
             }
         }    
         // no emergency vehicles found
-        ROS_DEBUG_STREAM("external_objects_callback did not detect emergency vehicle.");
+        // ROS_DEBUG_STREAM("external_objects_callback did not detect emergency vehicle.");
         return;    
     }
 
-    // callback function to go through roadway obstacle object list and check if emergency vehicle exist 
-    // void EmergencyPulloverStrategicPlugin::roadway_obstacles_cb(const cav_msgs::RoadwayObstacleListConstPtr& msg msg)
-    // {
-    //     *
-    //      * Note: 
-    //      * This is an empty function in case roadway obstacles is needed. 
-    //      * One of the two will be deleted based on emergency detection implementation.
-         
-        
-    //     ROS_DEBUG_STREAM("roadway_obstacles_callback called");
-    //     return; 
-    // }
+    void EmergencyPulloverStrategicPlugin::lane_change_finish_manual_cb(const std_msgs::BoolConstPtr& msg)
+    {
+        lane_change_finished_manual=true;
+        ROS_DEBUG_STREAM("lane_change_finished_manual received");
+    }
     
     bool EmergencyPulloverStrategicPlugin::isSameLaneWithEmergencyVehicle(geometry_msgs::PoseStamped pose_msg)
     {
@@ -437,35 +418,22 @@ namespace emergency_pullover_strategic
     bool EmergencyPulloverStrategicPlugin::plan_maneuver_cb(cav_srvs::PlanManeuversRequest &req, 
                                                             cav_srvs::PlanManeuversResponse &resp)
     {
-        // use current position to find lanelet ID
+        // current position and lanelets
         lanelet::BasicPoint2d current_loc(pose_msg_.pose.position.x, pose_msg_.pose.position.y);
-
-        // *** get the actually closest lanelets that relate to current location (n=10) ***//
         auto current_lanelets = lanelet::geometry::findNearest(wm_->getMap()->laneletLayer, current_loc, 10); 
-
-        // --------------- ROS 2 lanelet update --------------------
-        // lanelet::ConstLanelet current_lanelet; 
-        // // To avoid overlapping lanelets, compare the nearest lanelets with the route
-        // for (auto llt: current_lanelets)
-        // {
-        //     if (wm_->getRoute()->contains(llt.second))
-        //     {
-        //         current_lanelet = llt.second;
-        //         break;
-        //     }
-        // }
 
         // raise warn if no path was found
         if(current_lanelets.size() == 0)
         {
-            ROS_DEBUG_STREAM("Cannot find any lanelet in map!");
+            ROS_WARN_STREAM("Cannot find any lanelet in map!");
             return true;
         }
 
         // locate lanelet on shortest path
         auto shortest_path = wm_->getRoute()->shortestPath(); // find path among route
+        lanelet::ConstLanelet target_lanelet; 
 
-        lanelet::ConstLanelet current_lanelet;
+        // lanelet::ConstLanelet current_lanelet;
         int last_lanelet_index = -1;
         for (auto llt : current_lanelets)
         {
@@ -475,61 +443,228 @@ namespace emergency_pullover_strategic
                 if (potential_index != -1)
                 {
                     last_lanelet_index = potential_index;
-                    current_lanelet = shortest_path[last_lanelet_index]; // find lanelet2 from map that corresponse to the path
                     break;
                 }
             }
         }
 
+        // auto current_lanelets = lanelet::geometry::findNearest(wm_->getMap()->laneletLayer, current_loc, 1); 
+        if (current_lanelets.empty())
+        {
+            ROS_DEBUG_STREAM("The current laneletssssss are empty. So no lane change!");
+        } 
+        lanelet::ConstLanelet current_lanelet = current_lanelets[0].second;
+
 
         // read status data
         double current_progress = wm_->routeTrackPos(current_loc).downtrack;
+        ROS_DEBUG_STREAM("current downtrack: " << current_progress);
         double speed_progress = current_speed_;
         ros::Time time_progress = ros::Time::now();
         
-        // find speed limit 
-        double speed_limit = findSpeedLimit(current_lanelet);   //get Speed Limit
-        
-        // pick smaller length, accommodate when host is close to the route end
+        // generate target data
+        double target_speed;  
+        target_speed = findSpeedLimit(current_lanelet);   //get Speed Limit
+        double total_maneuver_length = current_progress + config_.time_step * target_speed;
         double route_length =  wm_->getRouteEndTrackPos().downtrack; 
+        total_maneuver_length = std::min(total_maneuver_length, route_length);
        
         // Update current status based on prior plan
         if(req.prior_plan.maneuvers.size()!= 0)
         {
             ROS_DEBUG_STREAM("Provided with initial plan...");
             time_progress = req.prior_plan.planning_completion_time;
+            ROS_DEBUG_STREAM("Prior plan time progress...xxx"<<time_progress);
             int end_lanelet = 0;
             updateCurrentStatus(req.prior_plan.maneuvers.back(), speed_progress, current_progress, end_lanelet);
             last_lanelet_index = findLaneletIndexFromPath(end_lanelet, shortest_path);
         }
         
         ROS_DEBUG_STREAM("Starting Loop");
+        ROS_DEBUG_STREAM("total_maneuver_length: " << total_maneuver_length << " route_length: " << route_length);
+        // lane change status
+        bool emergency_vehicle_detected = !not_emergency_vehicle_detected_;
+        ROS_DEBUG_STREAM("in mvr callback emergency vehicle detection result: " << emergency_vehicle_detected);
+
         // Note: Use current_lanelet list (which was determined based on vehicle pose) to find current lanelet ID. 
-        // lanelet::Id current_lanelet_id = current_lanelet.id();
         long current_lanelet_id = current_lanelets[0].second.id();
         ROS_DEBUG_STREAM("current_lanelet_id: " << current_lanelet_id);
-
-        // check emergency vehicle position and send maneuver plan
-        // no emergency vehicle detected, maintain current lane and speed
-        ROS_DEBUG_STREAM("not_emergency_vehicle_detected_: " << not_emergency_vehicle_detected_);
-        if (not_emergency_vehicle_detected_)
-        // if (false)
+        
+        // emergency vehicle detected: lane change maneuver
+        if (emergency_vehicle_detected)
         {   
-            double target_speed = speed_limit;
-            double total_maneuver_length = current_progress + config_.time_step * target_speed;
-            total_maneuver_length = std::min(total_maneuver_length, route_length);
-            ROS_DEBUG_STREAM("total_maneuver_length: " << total_maneuver_length << " route_length: " << route_length);
-
-
-            ROS_DEBUG_STREAM("Planning Lane Following Maneuver, no emergency vehicle detected! ");
+            ROS_DEBUG_STREAM("Start to handle emergence vehicle detected case");
+            // init right lane indicator 
+            bool right_lane_exist;
+            bool isLaneChangeFinished;
+            lanelet::BasicPoint2d target_lane_center_loc;
             
+            // target_lanelet = wm_->getMapRoutingGraph()->right(current_lanelet).get();
+            // ROS_DEBUG_STREAM("target_lanelet.id(): " << target_lanelet.id());
+            ROS_DEBUG_STREAM("Planning lane change maneuver with right lane!");
+            
+            // send out lane change plan
             while (current_progress < total_maneuver_length)
             {   
-                ROS_DEBUG_STREAM("Lane Following Maneuver! (No emergency vehicle detected)");
+                ROS_DEBUG_STREAM("Lane Change Maneuver ! ");
                 ROS_DEBUG_STREAM("current_progress: "<< current_progress);
                 ROS_DEBUG_STREAM("speed_progress: " << speed_progress);
                 ROS_DEBUG_STREAM("target_speed: " << target_speed);
-                ROS_DEBUG_STREAM("time_progress: " << ros::Time(time_progress).toSec());
+                ROS_DEBUG_STREAM("time_progress: " << time_progress.toSec());
+
+                // lane change maneuver plan variables 
+                double end_dist = total_maneuver_length;
+                ROS_DEBUG_STREAM("end_dist: " << end_dist);
+                double dist_diff = end_dist - current_progress;
+                ROS_DEBUG_STREAM("dist_diff: " << dist_diff);
+                double lc_end_dist = total_maneuver_length;
+                ROS_DEBUG_STREAM("lc_end_dist: " << lc_end_dist);
+
+                // find target lanelet for lane change
+                lanelet::ConstLanelet starting_lanelet = wm_->getMap()->laneletLayer.get(current_lanelet_id);
+                lanelet::ConstLanelet target_lanelet;
+                bool lanechangePossible;
+                int target_lanelet_id;
+                int ite = 0;
+                
+                for(auto id : route_msg_.route_path_lanelet_ids)
+                {
+                    // find lanelet relation
+                    auto llt = wm_->getMap()->laneletLayer.get(id);
+                    auto relation = wm_->getMapRoutingGraph()->routingRelation(starting_lanelet, llt);
+                    ite++;
+
+                    // if right lane exist
+                    if (relation == lanelet::routing::RelationType::Right)
+                    {
+                        // select target lanelet
+                        target_lanelet = llt;
+                        target_lanelet_id = id;
+                        ROS_DEBUG_STREAM("Lane change possible, right side target_lanelet_id: " << id);
+                        lanechangePossible = true;
+
+                        // monitor lane change status
+                        target_lane_center_loc = target_lanelet.centerline2d().back();
+                        double target_downtrack = wm_->routeTrackPos(target_lane_center_loc).downtrack;
+
+                        // look for connecting lanelet if the current right lanelet is about to end
+                        while(target_downtrack<lc_end_dist)
+                        {
+                            if (!wm_->getMapRoutingGraph()->following(current_lanelet, false).empty())
+                            {
+                                target_lanelet = wm_->getMapRoutingGraph()->following(current_lanelet, false).front();
+                                target_lane_center_loc = target_lanelet.centerline2d().back();
+                                target_downtrack=wm_->routeTrackPos(target_lane_center_loc).downtrack;
+                                target_lanelet_id=target_lanelet.id();
+                            }else
+                            {
+                                ROS_DEBUG_STREAM(" Can not find target lanelet with enough downtrack! ");
+                                lanechangePossible=false;
+                                break;
+                            }
+                        }                   
+                            
+                        // monitor 
+                        double target_crosstrack = wm_->routeTrackPos(target_lane_center_loc).crosstrack;
+                        ROS_DEBUG_STREAM("Find target lanelet, start to monitor lane change status... ");
+                        ROS_DEBUG_STREAM("target_crosstrack: " << target_crosstrack);
+                        ROS_DEBUG_STREAM("current_crosstrack_: " << current_crosstrack_);
+                        double crosstrackDiff = current_crosstrack_ - target_crosstrack; 
+                        lane_change_finished_ = abs(crosstrackDiff) <= config_.lane_width*config_.em_lane_ctd_check_ratio; 
+                        ROS_DEBUG_STREAM("crosstrackDiff: " << crosstrackDiff);
+                        ROS_DEBUG_STREAM("is LaneChange Finished: " << lane_change_finished_); //TODO: use this variable to determine lane-change status 
+
+                        break;
+                    }
+
+                    // if loop ends with no right lane, mark lane change impossible and continue lane following
+                    if (ite == route_msg_.route_path_lanelet_ids.size())
+                    {
+                        ROS_DEBUG_STREAM("No right lane found, mark lane change impossible...");
+                        lanechangePossible = false;    
+                    }
+                
+                }
+
+                // send plan 
+                if (lanechangePossible)
+                {
+                    ROS_DEBUG_STREAM("Lane change possible, planning it.. " );
+                    cav_msgs::Maneuver maneuver_msg_=composeLaneChangeManeuverMessage(current_progress, lc_end_dist,  
+                                        speed_progress, target_speed, current_lanelet_id, target_lanelet_id , time_progress);
+                    resp.new_plan.maneuvers.push_back(maneuver_msg_);
+                    resp.new_plan.planning_completion_time=maneuver_msg_.lane_change_maneuver.end_time;
+                    ROS_DEBUG_STREAM("resp.new_plan.planning_completion_time = "<<resp.new_plan.planning_completion_time);                        
+                }
+                else
+                {
+                    // use reduced target speed after lane change
+                    target_speed = target_speed*config_.lane_change_speed_adjustment;   //get Speed Limit
+                    total_maneuver_length = current_progress + config_.time_step * target_speed;
+                    total_maneuver_length = std::min(total_maneuver_length, route_length);
+                    double end_dist = total_maneuver_length;
+                    // mark lane change finish position
+                    if (lane_change_finish_dtd_ == 0.0) {lane_change_finish_dtd_ = total_maneuver_length;}
+
+                    // log maneuver data
+                    ROS_DEBUG_STREAM("Same Lane Maneuver after lane change (right lane not available)! ");
+                    ROS_DEBUG_STREAM("current_progress: "<< current_progress);
+                    ROS_DEBUG_STREAM("speed_progress: " << speed_progress);
+                    ROS_DEBUG_STREAM("target_speed (reduced): " << target_speed);
+                    ROS_DEBUG_STREAM("time_progress: " << time_progress.toSec());
+                    ROS_DEBUG_STREAM("end_dist: " << end_dist);
+
+                    // calculate distance increment
+                    double dist_diff = end_dist - current_progress;
+                    ROS_DEBUG_STREAM("dist_diff (after lane change): " << dist_diff);
+                    ROS_DEBUG_STREAM("current_lanelet_id: (after lane change) " << current_lanelet_id);
+
+                    ROS_DEBUG_STREAM("Lane change impossible, planning lane following instead ... " );
+                    cav_msgs::Maneuver maneuver_msg_=composeManeuverMessage(current_progress, end_dist,  
+                                        speed_progress, target_speed, current_lanelet_id, time_progress);
+                    resp.new_plan.maneuvers.push_back(maneuver_msg_);
+                    resp.new_plan.planning_completion_time=maneuver_msg_.lane_following_maneuver.end_time;
+                    ROS_DEBUG_STREAM("resp.new_plan.planning_completion_time = "<<resp.new_plan.planning_completion_time);
+
+                    // send stop notice once lane following dtd in emergency lane pass threshold (vehicle length)
+                    if (current_downtrack_ - lane_change_finish_dtd_ >= config_.vehicle_length)
+                    {
+                        // publish stop notice 
+                        std_msgs::Bool stop_v_msg;
+                        stop_v_msg.data = true;
+                        stop_vehicle_publisher_(stop_v_msg);
+                        ROS_DEBUG_STREAM("Publish notice to stop vehicle... ");
+                    }
+                } // send plan (lane change vs in lane cruising)
+
+                // update lane change variables 
+                current_progress += dist_diff;
+                time_progress = resp.new_plan.maneuvers.back().lane_change_maneuver.end_time;
+                speed_progress = target_speed;
+                if(current_progress >= total_maneuver_length)
+                {
+                    break;
+                }
+
+                ++last_lanelet_index;
+            }// while loop send out lane change plan
+
+            // Note: lane change finished was determined by checking right lane existance. 
+            //TODO: finish this condition to better ditinguish "lane change over" vs "no current right lane".
+        
+        } // emergency vehicle detected
+        
+        // emergency vehicle not detected: same-lane maneuver  
+        else 
+        {
+            ROS_DEBUG_STREAM("Planning Same Lane Maneuver! ");
+            while (current_progress < total_maneuver_length)
+            {   
+                ROS_DEBUG_STREAM("Same Lane Maneuver before emergency vehicle detection! ");
+                ROS_DEBUG_STREAM("current_progress: "<< current_progress);
+                ROS_DEBUG_STREAM("speed_progress: " << speed_progress);
+                ROS_DEBUG_STREAM("target_speed: " << target_speed);
+                ROS_DEBUG_STREAM("time_progress: " << time_progress.toSec());
                 double end_dist = total_maneuver_length;
                 ROS_DEBUG_STREAM("end_dist: " << end_dist);
                 double dist_diff = end_dist - current_progress;
@@ -539,155 +674,49 @@ namespace emergency_pullover_strategic
                     break;
                 }
 
-                resp.new_plan.maneuvers.push_back(composeManeuverMessage(current_progress, end_dist,  
-                                        speed_progress, target_speed, current_lanelet_id, time_progress));
+                cav_msgs::Maneuver maneuver_msg_=composeManeuverMessage(current_progress, end_dist,  
+                                            speed_progress, target_speed, current_lanelet_id, time_progress);
+                resp.new_plan.maneuvers.push_back(maneuver_msg_);
+                resp.new_plan.planning_completion_time=maneuver_msg_.lane_following_maneuver.end_time;
+                ROS_DEBUG_STREAM("resp.new_plan.planning_completion_time = "<<resp.new_plan.planning_completion_time);
                                     
-
                 current_progress += dist_diff;
                 time_progress = resp.new_plan.maneuvers.back().lane_following_maneuver.end_time;
                 speed_progress = target_speed;
-                if(current_progress >= total_maneuver_length || last_lanelet_index == static_cast<int>(shortest_path.size()) - 1)
+                if(current_progress >= total_maneuver_length)
                 {
                     break;
                 }
-
-                // update lanelet index
                 ++last_lanelet_index;
             }
-        }
-        // emergency vehicle detected, check relative position
-        else
-        {   
-            // check emergency vehicle position
-            // (select right lanelet is inherited from "/basic_autonomy_ros_2/basic_autonomy.cpp")
+        } //emergency vehicle not detected
 
-            // same lane with host, prepare to pull-over
-            if (true) 
-            {
-                // right lane exist 
-                if(true)
-                {
-                    // init variables
-                    double target_speed;
-                    double total_maneuver_length;
-                    lanelet::ConstLanelet target_lanelet;
-                    lanelet::Id target_lanelet_id;
-                    // mark vehicle as pulled-over (default as false)
-                    is_host_pulled_over_ = true;
-                    
-                    // if right lane available
-                    if (wm_->getMapRoutingGraph()->right(current_lanelet))
-                    {
-                        // locate target lanelet
-                        target_lanelet = wm_->getMapRoutingGraph()->right(current_lanelet).get();
-                        target_lanelet_id = target_lanelet.id();
-
-                        // emergency vehicle detected, start lane change with reduced speed
-                        target_speed = speed_limit*config_.lane_change_speed_adjustment;
-                        total_maneuver_length = current_progress + config_.time_step * target_speed;
-                        ROS_DEBUG_STREAM("Planning right Lane Change Maneuver, same-lane emergency vehicle detected! ");
-                        total_maneuver_length = std::min(total_maneuver_length, route_length);
-                        ROS_DEBUG_STREAM("total_maneuver_length: " << total_maneuver_length << " route_length: " << route_length);
-
-                    }
-                    
-                    // if adjacent right lane available
-                    else
-                    {
-                        // locate target lanelet 
-                        target_lanelet = wm_->getMapRoutingGraph()->adjacentRight(current_lanelet).get();
-                        target_lanelet_id = target_lanelet.id();
-
-                        // emergency vehicle detected, start lane change with reduced speed
-                        target_speed = speed_limit*config_.lane_change_speed_adjustment;
-                        total_maneuver_length = current_progress + config_.time_step * target_speed;
-                        ROS_DEBUG_STREAM(
-                                    "Planning adjacent right Lane Change Maneuver, same-lane emergency vehicle detected!");
-                        total_maneuver_length = std::min(total_maneuver_length, route_length);
-                        ROS_DEBUG_STREAM("total_maneuver_length: " << total_maneuver_length << " route_length: " << route_length);
-
-                    }
-
-                    // send out lane change plan
-                    while (current_progress < total_maneuver_length)
-                    {   
-                        ROS_DEBUG_STREAM("Lane Change Maneuver for emergency pull-over! ");
-                        ROS_DEBUG_STREAM("current_progress: "<< current_progress);
-                        ROS_DEBUG_STREAM("speed_progress: " << speed_progress);
-                        ROS_DEBUG_STREAM("target_speed: " << target_speed);
-                        ROS_DEBUG_STREAM("time_progress: " << ros::Time(time_progress).toSec());
-
-                        // set to next lane destination
-                        double end_dist = total_maneuver_length;
-                        ROS_DEBUG_STREAM("end_dist: " << end_dist);
-                        // consider calculate dtd_diff and ctd_diff
-                        double dist_diff = end_dist - current_progress;
-                        ROS_DEBUG_STREAM("dist_diff: " << dist_diff);
-                        // define desired downtrack distance needed to finish lane change (in terms of number of maneuvers length)
-                        double lc_end_dist = config_.lane_change_desired_steps*total_maneuver_length;
-                        ROS_DEBUG_STREAM("lc_end_dist before buffer: " << lc_end_dist);
-                        lc_end_dist = std::max(lc_end_dist, current_progress + config_.maxLaneChangeDist);
-                        ROS_DEBUG_STREAM("lc_end_dist after buffer: " << lc_end_dist);
-                        
-                        // Check if lane change possible
-                        bool lanechangePossible = true;
-                        ROS_DEBUG_STREAM("lanechangePossible: " << lanechangePossible);
-                        
-                        // send out plan
-                        if (lanechangePossible)
-                        {
-                            ROS_DEBUG_STREAM("Lane change possible, planning it.. " );
-                            resp.new_plan.maneuvers.push_back(composeLaneChangeManeuverMessage(current_downtrack_, lc_end_dist,  
-                                                speed_progress, target_speed, current_lanelet_id, target_lanelet_id , time_progress));
-                            
-                        }
-                        else
-                        {
-                            ROS_DEBUG_STREAM("Lane change impossible, planning lane following with reduced speed ... " );
-                            resp.new_plan.maneuvers.push_back(composeManeuverMessage(current_downtrack_, end_dist,  
-                                                speed_progress, target_speed, current_lanelet_id, time_progress));
-                        }
-
-                        // Update
-                        current_progress += dist_diff;
-                        // read lane change maneuver end time as time progress
-                        time_progress = resp.new_plan.maneuvers.back().lane_change_maneuver.end_time;
-                        speed_progress = target_speed;
-                        if(current_progress >= total_maneuver_length || last_lanelet_index == static_cast<int>(shortest_path.size()) - 1)
-                        {
-                            break;
-                        }
-
-                        // update lanelet index
-                        ++last_lanelet_index;
-
-                    }
-                
-                }            
-
-            }        
-        }
+        if(resp.new_plan.maneuvers.size() == 0)
+        {
+            ROS_WARN_STREAM("Cannot plan maneuver because no route is found");
+        }  
+        
         return true;
-    }
+    } //plan_maneuver_cb;
 
     // -------------------------------- Spin Emergency Pullover plugin --------------------------------
     bool EmergencyPulloverStrategicPlugin::onSpin() 
     {  
         plugin_discovery_publisher_(plugin_discovery_msg_);      
-        ROS_DEBUG_STREAM("Emergency pull-over plug-in is on Spin... ");
+        // ROS_DEBUG_STREAM("Emergency pull-over plug-in is on Spin... ");
         if (not_emergency_vehicle_detected_)
         {
-            ROS_DEBUG_STREAM("No emergency vehicle detected... ");
+            // ROS_DEBUG_STREAM("No emergency vehicle detected... ");
         }
         else
         {
-            if(is_host_pulled_over_)
+            if(is_pull_over_initiated)
             {
-                ROS_DEBUG_STREAM("Emergency vehicle detected, host started lane change... ");
+                // ROS_DEBUG_STREAM("Emergency vehicle detected, host started lane change... ");
             }
             else
             {
-                ROS_DEBUG_STREAM("Emergency vehicle detected, host searching for lane change opportunity... ");
+                // ROS_DEBUG_STREAM("Emergency vehicle detected, host searching for lane change opportunity... ");
             }
         }
 

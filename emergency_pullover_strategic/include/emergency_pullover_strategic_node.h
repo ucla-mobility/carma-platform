@@ -35,6 +35,7 @@
 #include <cav_msgs/RoadwayObstacleList.h>
 #include <cav_msgs/ExternalObject.h>
 
+#include <std_msgs/Bool.h>
 #include <cav_msgs/BSM.h>
 #include <carma_wm/WMListener.h>
 #include <functional>
@@ -62,6 +63,7 @@ class EmergencyPulloverStrategicPluginNode
             auto wm_ = wml.getWorldModel();
 
             ros::Publisher discovery_pub = nh.advertise<cav_msgs::Plugin>("plugin_discovery", 1);
+            ros::Publisher stop_pub = nh.advertise<std_msgs::Bool>("emergency_stop", 10);
 
             // load config file
             EmergencyPulloverStrategicPluginConfig config;
@@ -76,13 +78,20 @@ class EmergencyPulloverStrategicPluginNode
             pnh.param<double>("maxLaneChangeDist", config.maxLaneChangeDist, config.maxLaneChangeDist);
             pnh.param<double>("stopping_deceleration", config.stopping_deceleration, config.stopping_deceleration);
             pnh.param<double>("lane_change_recheck_time", config.lane_change_recheck_time, config.lane_change_recheck_time);
+            pnh.param<double>("lane_width", config.lane_width, config.lane_width);
+            pnh.param<double>("vehicle_length", config.vehicle_length, config.vehicle_length);
+            pnh.param<double>("em_lane_ctd_check_ratio", config.em_lane_ctd_check_ratio, config.em_lane_ctd_check_ratio);
+            pnh.param<double>("em_lane_maintain_ratio", config.em_lane_maintain_ratio, config.em_lane_maintain_ratio);
+            pnh.param<double>("reduced_lane_follow_speed", config.reduced_lane_follow_speed, config.reduced_lane_follow_speed);
             
             pnh.getParam("/vehicle_id", config.vehicleID);
             
             ROS_INFO_STREAM("EmergencyPulloverStrategicPluginConfig Params" << config);
 
             // init worker
-            EmergencyPulloverStrategicPlugin worker(wm_, config, [&discovery_pub](auto msg) { discovery_pub.publish(msg); });
+            EmergencyPulloverStrategicPlugin worker(wm_, config, 
+                                                    [&discovery_pub](auto msg) { discovery_pub.publish(msg); },
+                                                    [&stop_pub](auto msg) { stop_pub.publish(msg); });
           
             ros::ServiceServer maneuver_srv_ = nh.advertiseService("plugins/EmergencyPullOverStrategicPlugin/plan_maneuvers",
                                                     &EmergencyPulloverStrategicPlugin::plan_maneuver_cb, &worker);
@@ -90,6 +99,7 @@ class EmergencyPulloverStrategicPluginNode
             // external object subs 
             // (note: the topic name was following "roadway object" and "motion computation" node. May need to change here to "external object list")
             ros::Subscriber external_obj_sub = nh.subscribe("external_objects", 1, &EmergencyPulloverStrategicPlugin::external_objects_cb,  &worker);
+            ros::Subscriber lane_change_finished_sub = nh.subscribe("lane_change_finish_manual", 1, &EmergencyPulloverStrategicPlugin::lane_change_finish_manual_cb,  &worker);
             // ros::Subscriber roadway_obstacles_sub = nh.subscribe("roadway_obstacles", 1, &EmergencyPulloverStrategicPlugin::roadway_obstacles_cb,  &worker);
             
             // vehicle state subs
@@ -97,6 +107,7 @@ class EmergencyPulloverStrategicPluginNode
             ros::Subscriber current_twist_sub = nh.subscribe("current_velocity", 1, &EmergencyPulloverStrategicPlugin::twist_cb,  &worker);
             ros::Subscriber cmd_sub = nh.subscribe("twist_raw", 1, &EmergencyPulloverStrategicPlugin::cmd_cb,  &worker);
             ros::Subscriber georeference_sub = nh.subscribe("georeference", 1, &EmergencyPulloverStrategicPlugin::georeference_cb, &worker);    
+            ros::Subscriber route_sub = nh.subscribe("route", 1, &EmergencyPulloverStrategicPlugin::route_cb, &worker);
             
             ros::Timer discovery_pub_timer_ = nh.createTimer(
                     ros::Duration(ros::Rate(10.0)),

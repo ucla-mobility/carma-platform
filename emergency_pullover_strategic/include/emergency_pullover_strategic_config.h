@@ -72,9 +72,15 @@ namespace emergency_pullover_strategic
     double maxCrosstrackError           = 2.0;  // m
     double time_step                    = 15.0; // s
     double lane_change_speed_adjustment = 0.7; 
-    double maxLaneChangeDist            = 22.0; //m
+    double reduced_lane_follow_speed    = 1.0; 
+    double maxLaneChangeDist            = 22.0; // m
     double stopping_deceleration        = 2.5;  // m/s^2
-    double lane_change_recheck_time     = 1.5;  //s
+    double lane_change_recheck_time     = 1.5;  // s
+    // parameters for lane change 
+    double lane_width                   = 3.5;  // m; width of the lane
+    double vehicle_length               = 5.0;    // m; Note: 20m with trailer; 7m if only tractor; 5m for Lincoln 
+    double em_lane_ctd_check_ratio      = 1.0;  // ratio to determine successful lane change to emergency lane
+    double em_lane_maintain_ratio       = 2.0;    // ratio to determine how long the host travel in emergency lane before stop
 
 
     friend std::ostream& operator<<(std::ostream& output, const EmergencyPulloverStrategicPluginConfig& c)
@@ -89,6 +95,12 @@ namespace emergency_pullover_strategic
             << "maxLaneChangeDist: " << c.maxLaneChangeDist << std::endl
             << "stopping_deceleration: " << c.stopping_deceleration << std::endl
             << "lane_change_recheck_time: " << c.lane_change_recheck_time << std::endl
+            << "lane_width: " << c.lane_width << std::endl
+            << "vehicle_length: " << c.vehicle_length << std::endl
+            << "em_lane_ctd_check_ratio: " << c.em_lane_ctd_check_ratio << std::endl
+            << "em_lane_maintain_ratio: " << c.em_lane_maintain_ratio << std::endl
+            << "reduced_lane_follow_speed: " << c.reduced_lane_follow_speed << std::endl
+
             << "}" << std::endl; 
       return output;
     }
