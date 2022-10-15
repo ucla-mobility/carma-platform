@@ -55,15 +55,14 @@ namespace external_object_list_publisher
         is_emergency_vehicle_detected_ = msg->data;
 
         // publish external onject if emergency detection result is set to true
-        if (is_emergency_vehicle_detected_)
-        {
-            publish_external_object_list();
-        }
+
+        publish_external_object_list(is_emergency_vehicle_detected_);
+
 
     }
 
     // -------------------------------- Generate maneuver plan --------------------------------
-    void ExternalObjectListPublisher::publish_external_object_list()
+    void ExternalObjectListPublisher::publish_external_object_list(bool front_or_rear)
     {       
         // 3. generate external object message 
         cav_msgs::ExternalObjectList msg;
@@ -91,6 +90,14 @@ namespace external_object_list_publisher
         // obj.pose.pose.x = previous_llt_location.x;
         // obj.pose.pose.y = previous_llt_location.y;
         obj.pose.pose = pose_msg_.pose;
+
+        if (front_or_rear)
+        {
+            obj.pose.pose.position.x=10;
+        }else
+        {
+            obj.pose.pose.position.x=-10;
+        }
 
         // covariance (a sample covariance matrix)
         boost::array<double, 36> input_covariance = { 
