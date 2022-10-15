@@ -143,7 +143,7 @@ namespace system_controller
 
     msg.source_node = get_node_base_interface()->get_fully_qualified_name(); // The the source name for the message
 
-    system_alert_pub_->publish(msg); 
+    // system_alert_pub_->publish(msg); 
   }
 
   void SystemControllerNode::on_system_alert(const carma_msgs::msg::SystemAlert::UniquePtr msg)
@@ -171,7 +171,7 @@ namespace system_controller
        shutdown_msg.type = carma_msgs::msg::SystemAlert::SHUTDOWN;
        shutdown_msg.description = "SHUTDOWN " + msg->description;
 
-       publish_system_alert(shutdown_msg);
+       // publish_system_alert(shutdown_msg);
 
        std::this_thread::sleep_for(std::chrono::milliseconds(5)); // Add a bit of sleep to allow message publication
 

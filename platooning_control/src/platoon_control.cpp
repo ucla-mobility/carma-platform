@@ -73,6 +73,8 @@ namespace platoon_control
         // Platoon Info Subscriber
         platoon_info_sub_ = nh_->subscribe<cav_msgs::PlatooningInfo>("platoon_info", 1, &PlatoonControlPlugin::platoonInfo_cb, this);
 
+        emergency_stop_sub_ = nh_->subscribe<std_msgs::Bool>("emergency_stop", 1, &PlatoonControlPlugin::emergency_stop_cb, this);
+
 		// Control Publisher
 		twist_pub_ = nh_->advertise<geometry_msgs::TwistStamped>("twist_raw", 5, true);
         ctrl_pub_ = nh_->advertise<autoware_msgs::ControlCommandStamped>("ctrl_raw", 5, true);
@@ -109,6 +111,15 @@ namespace platoon_control
     void PlatoonControlPlugin::run(){
         initialize();
         ros::CARMANodeHandle::spin();
+    }
+
+    void PlatoonControlPlugin::emergency_stop_cb(const std_msgs::BoolConstPtr& msg)
+    {
+        if (msg->data)
+        {
+            emergency_stop_flag=true;
+        }
+        
     }
 
     bool PlatoonControlPlugin::controlTimerCb()
@@ -279,6 +290,7 @@ namespace platoon_control
         pcw_.setLeader(platoon_leader_);
     	pcw_.generateSpeed(first_trajectory_point);
     	pcw_.generateSteer(lookahead_point);
+        pcw_.setEmergencyStopFlag(emergency_stop_flag);
 
 
         geometry_msgs::TwistStamped twist_msg = composeTwistCmd(pcw_.speedCmd_, pcw_.angVelCmd_);

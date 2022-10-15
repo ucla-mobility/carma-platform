@@ -82,7 +82,7 @@ namespace basic_autonomy
             // A general fix will be implemented soon. (issue #1863)
             bool lanelets_defined = !maneuver.lane_following_maneuver.lane_ids.empty();
             ROS_DEBUG_STREAM("lanelets_defined: " << lanelets_defined);
-            bool isFromPlatooning = maneuver.lane_following_maneuver.parameters.planning_strategic_plugin == "PlatooningStrategicIHPPlugin";
+            bool isFromPlatooning = maneuver.lane_following_maneuver.parameters.planning_strategic_plugin == "EmergencyPullOverStrategicPlugin";
             ROS_DEBUG_STREAM("isFromPlatooning: " << isFromPlatooning);
 
             if (lanelets_defined && isFromPlatooning)

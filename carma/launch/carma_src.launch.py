@@ -216,6 +216,6 @@ def generate_launch_description():
         environment_group,
         localization_group,
         v2x_group,
-        guidance_group, 
-        system_controller
+        system_controller,
+        guidance_group
     ])

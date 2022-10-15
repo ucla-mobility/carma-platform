@@ -499,7 +499,7 @@ namespace plan_delegator
         }
         else
         {
-            ROS_WARN_STREAM("Planned trajectory is empty. It will not be published!");
+            // ROS_WARN_STREAM("Planned trajectory is empty. It will not be published!");
         }
     }
 

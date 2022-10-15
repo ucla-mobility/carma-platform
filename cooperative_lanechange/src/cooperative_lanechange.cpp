@@ -563,7 +563,9 @@ namespace cooperative_lanechange
 
         double starting_downtrack = std::min(current_downtrack, original_start_dist);
 
+        ROS_DEBUG_STREAM("before creating lane change geometry!");
         auto points_and_target_speeds = basic_autonomy::waypoint_generation::create_geometry_profile(maneuver_plan, starting_downtrack ,wm_, ending_state_before_buffer_, req.vehicle_state, wpg_general_config, wpg_detail_config);
+        ROS_DEBUG_STREAM("after creating lane change geometry!");
 
         //Calculate maneuver fraction completed (current_downtrack/(ending_downtrack-starting_downtrack)
         auto maneuver_end_dist = maneuver_plan.back().lane_change_maneuver.end_dist;

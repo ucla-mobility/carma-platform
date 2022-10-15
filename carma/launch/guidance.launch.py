@@ -60,6 +60,9 @@ def generate_launch_description():
     
     route_param_file = os.path.join(
         get_package_share_directory('route'), 'config/parameters.yaml')
+
+    # external_object_list_publisher_param_file = os.path.join(
+    #     get_package_share_directory('external_object_list_publisher'), 'config/parameters.yaml')
     
     env_log_levels = EnvironmentVariable('CARMA_ROS_LOGGING_CONFIG', default_value='{ "default_level" : "WARN" }')
 
@@ -136,7 +139,17 @@ def generate_launch_description():
                     vehicle_config_param_file
                 ]
             ),
-        ]
+            # ComposableNode(
+            #     package='external_object_list_publisher',
+            #     plugin='external_object_list_publisher::Node',
+            #     name='external_object_list_publisher_node',
+            #     extra_arguments=[
+            #         {'use_intra_process_comms': True}, 
+            #         {'--log-level' : GetLogLevel('external_object_list_publisher', env_log_levels) }
+            #     ]
+            # ),
+        ],
+        output='screen'
     )
 
     # subsystem_controller which orchestrates the lifecycle of this subsystem's components
@@ -152,6 +165,6 @@ def generate_launch_description():
     return LaunchDescription([  
         declare_vehicle_config_param_file_arg,
         declare_subsystem_controller_param_file_arg,      
-        carma_guidance_container,
-        subsystem_controller
+        subsystem_controller,
+        carma_guidance_container
     ]) 

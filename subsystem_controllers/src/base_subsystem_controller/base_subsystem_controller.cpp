@@ -76,7 +76,7 @@ namespace subsystem_controllers
         alert.type = carma_msgs::msg::SystemAlert::FATAL;
         alert.description = base_config_.subsystem_namespace + " subsytem has failed with error: " + msg->description;
         alert.source_node =  get_node_base_interface()->get_fully_qualified_name();
-        publish_system_alert(alert);
+        // publish_system_alert(alert);
 
         // TODO: It might be worth trying to deactivate or shutdown after alerting the larger system, 
         //       but not clear on if that will increase instability of shutdown process
