@@ -83,6 +83,8 @@ class EmergencyVehicleStrategicPluginNode
             pnh.param<double>("em_lane_ctd_check_ratio", config.em_lane_ctd_check_ratio, config.em_lane_ctd_check_ratio);
             pnh.param<double>("em_lane_maintain_ratio", config.em_lane_maintain_ratio, config.em_lane_maintain_ratio);
             pnh.param<double>("reduced_lane_follow_speed", config.reduced_lane_follow_speed, config.reduced_lane_follow_speed);
+            pnh.param<double>("left_path_safety_distance", config.left_path_safety_distance, config.left_path_safety_distance);
+            
             
             pnh.getParam("/vehicle_id", config.vehicleID);
             

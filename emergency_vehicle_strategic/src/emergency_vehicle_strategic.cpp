@@ -805,7 +805,7 @@ namespace emergency_vehicle_strategic
                     ROS_DEBUG_STREAM("resp.new_plan.planning_completion_time = "<<resp.new_plan.planning_completion_time);
 
                     // send stop notice once lane following dtd in emergency lane pass threshold (vehicle length)
-                    if (current_downtrack_ - left_lane_change_finish_dtd_ >= config_.vehicle_length)
+                    if (current_downtrack_ - left_lane_change_finish_dtd_ >= config_.left_path_safety_distance)
                     {
                         // publish stop notice 
                         left_lane_change_finish_=true;

@@ -16,15 +16,6 @@
  * the License.
  */
 
-/*
- * Originally Developed for ROS1 by the UCLA Mobility Lab, 10/20/2021. 
- *
- * Creator: Xu Han
- * Author: Xu Han, Xin Xia, Zonglin Meng, Jiaqi Ma
- * 
- * 8/15/2022: Ported to ROS2
- */
-
 #include <iostream>
 
 namespace emergency_vehicle_strategic
@@ -82,6 +73,8 @@ namespace emergency_vehicle_strategic
     double em_lane_ctd_check_ratio      = 1.0;  // ratio to determine successful lane change to emergency lane
     double em_lane_maintain_ratio       = 2.0;    // ratio to determine how long the host travel in emergency lane before stop
 
+    double left_path_safety_distance    = 40.0;    // m; Note: 20m with trailer; 7m if only tractor; 5m for Lincoln 
+
 
     friend std::ostream& operator<<(std::ostream& output, const EmergencyVehicleStrategicPluginConfig& c)
     {
@@ -100,6 +93,8 @@ namespace emergency_vehicle_strategic
             << "em_lane_ctd_check_ratio: " << c.em_lane_ctd_check_ratio << std::endl
             << "em_lane_maintain_ratio: " << c.em_lane_maintain_ratio << std::endl
             << "reduced_lane_follow_speed: " << c.reduced_lane_follow_speed << std::endl
+            << "left_path_safety_distance: " << c.left_path_safety_distance << std::endl
+
 
             << "}" << std::endl; 
       return output;
