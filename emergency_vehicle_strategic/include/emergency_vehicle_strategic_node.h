@@ -110,6 +110,7 @@ class EmergencyVehicleStrategicPluginNode
             ros::Subscriber cmd_sub = nh.subscribe("twist_raw", 1, &EmergencyVehicleStrategicPlugin::cmd_cb,  &worker);
             ros::Subscriber georeference_sub = nh.subscribe("georeference", 1, &EmergencyVehicleStrategicPlugin::georeference_cb, &worker);    
             ros::Subscriber route_sub = nh.subscribe("route", 1, &EmergencyVehicleStrategicPlugin::route_cb, &worker);
+            ros::Subscriber prepass_decision_sub = nh.subscribe("prepass_decision", 1, &EmergencyVehicleStrategicPlugin::prepass_decision_cb,  &worker);
             
             ros::Timer discovery_pub_timer_ = nh.createTimer(
                     ros::Duration(ros::Rate(10.0)),

@@ -236,6 +236,8 @@ namespace emergency_vehicle_strategic
                                                                   lanelet::ConstLanelet& left_target_lanelet,
                                                                   lanelet::ConstLanelet& right_target_lanelet,
                                                                   int& target_lanelet_id);
+
+            void prepass_decision_cb(const std_msgs::StringConstPtr& msg);
             
             // public global variable
 
@@ -320,6 +322,8 @@ namespace emergency_vehicle_strategic
             double left_lane_change_finish_dtd_ = 0.0;
 
             bool left_lane_change_finish_=false;
+
+            bool pull_in_flag_=false;
 
 
             /** lane change option

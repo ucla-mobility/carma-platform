@@ -330,6 +330,13 @@ namespace emergency_vehicle_strategic
 
             auto next_lanelet_id = wm_->getMapRoutingGraph()->following(current_lanelet, false).front().id();
             ROS_DEBUG_STREAM("next_lanelet_id:"<< next_lanelet_id);
+
+            if (pull_in_flag_ && lane_id==0)
+            {
+                // next_lanelet_id=;
+                /* code */
+            }
+
             maneuver_msg.lane_following_maneuver.lane_ids.push_back(std::to_string(next_lanelet_id));
         }
         else
@@ -475,6 +482,11 @@ namespace emergency_vehicle_strategic
             lane_change_option=4;
             ROS_DEBUG_STREAM("Route has not been loaded yet EmergencyVehicleStrategicPlugin");
         }
+    }
+
+    void EmergencyVehicleStrategicPlugin::prepass_decision_cb(const std_msgs::StringConstPtr& msg)
+    {
+        pull_in_flag_=true;
     }
 
     // -------------------------------- Generate maneuver plan --------------------------------
