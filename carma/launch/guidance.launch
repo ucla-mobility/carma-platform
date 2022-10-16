@@ -110,9 +110,14 @@
   </group> -->
 
       <!-- emergency_pullover_strategic -->
-  <group>
+<!--   <group>
     <include file="$(find emergency_pullover_strategic)/launch/emergency_pullover_strategic.launch" />
-  </group>
+  </group> -->
+
+  <!-- emergency_vehicle_strategic -->
+  <group>
+    <include file="$(find emergency_vehicle_strategic)/launch/emergency_vehicle_strategic.launch" />
+  </group>  
 
       <!-- external_object_list_publisher -->
   <group>
