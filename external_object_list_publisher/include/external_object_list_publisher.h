@@ -87,7 +87,7 @@ namespace external_object_list_publisher
             /**
             * \brief Generate and publish the sythetic message for emergency vehicles
             */
-            void publish_external_object_list();
+            void publish_external_object_list(bool front_or_rear);
 
             /**
             * \brief Spin callback function
