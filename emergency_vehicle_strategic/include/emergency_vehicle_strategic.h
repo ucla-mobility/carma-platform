@@ -234,8 +234,8 @@ namespace emergency_vehicle_strategic
             void check_lane_change_option(lanelet::ConstLanelet starting_lanelet, 
                                                                   int& lane_change_option, 
                                                                   lanelet::ConstLanelet& left_target_lanelet,
-                                                                  lanelet::ConstLanelet& right_target_lanelet
-                                                                  );
+                                                                  lanelet::ConstLanelet& right_target_lanelet,
+                                                                  int& target_lanelet_id);
             
             // public global variable
 

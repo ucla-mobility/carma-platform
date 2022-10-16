@@ -420,14 +420,14 @@ namespace emergency_vehicle_strategic
     void EmergencyVehicleStrategicPlugin::check_lane_change_option(lanelet::ConstLanelet starting_lanelet, 
                                                                   int& lane_change_option, 
                                                                   lanelet::ConstLanelet& left_target_lanelet,
-                                                                  lanelet::ConstLanelet& right_target_lanelet
-                                                                  )
+                                                                  lanelet::ConstLanelet& right_target_lanelet,
+                                                                  int& target_lanelet_id) 
     {
         if (!route_msg_.route_path_lanelet_ids.empty())
         {
 
             int ite=0;
-            int target_lanelet_id;
+            // int target_lanelet_id;
 
             for(auto id : route_msg_.route_path_lanelet_ids)
             {
@@ -454,11 +454,12 @@ namespace emergency_vehicle_strategic
                     ROS_DEBUG_STREAM("Left lane change possible, left side target_lanelet_id: " << id);
                     lane_change_option=1;
                     left_target_lanelet = llt;
+
+                    break;
                 }
                 else
                 {
                     lane_change_option=0;
-                    ROS_DEBUG_STREAM(" Lane change impossible! ");
                 }
                 // if loop ends with no right lane, mark lane change impossible and continue lane following
                 if (ite == route_msg_.route_path_lanelet_ids.size())
@@ -587,7 +588,10 @@ namespace emergency_vehicle_strategic
                 int ite = 0;
                 int lane_change_option=0;
                 lanelet::ConstLanelet left_target_lanelet,right_target_lanelet;
-                check_lane_change_option(starting_lanelet,lane_change_option,left_target_lanelet,right_target_lanelet);
+                check_lane_change_option(starting_lanelet,lane_change_option,left_target_lanelet,right_target_lanelet,target_lanelet_id);
+
+                ROS_DEBUG_STREAM("found target_lanelet_id: " << target_lanelet_id);
+
 
                 if (lane_change_option==2)
                 {
@@ -701,7 +705,7 @@ namespace emergency_vehicle_strategic
             
             // target_lanelet = wm_->getMapRoutingGraph()->right(current_lanelet).get();
             // ROS_DEBUG_STREAM("target_lanelet.id(): " << target_lanelet.id());
-            ROS_DEBUG_STREAM("Planning lane change maneuver with right lane!");
+            ROS_DEBUG_STREAM("Planning lane change maneuver with left lane!");
             
             // send out lane change plan
             while (current_progress < total_maneuver_length)
@@ -728,11 +732,13 @@ namespace emergency_vehicle_strategic
                 int ite = 0;
                 int lane_change_option=0;
                 lanelet::ConstLanelet left_target_lanelet,right_target_lanelet;
-                check_lane_change_option(starting_lanelet,lane_change_option,left_target_lanelet,right_target_lanelet);
+                check_lane_change_option(starting_lanelet,lane_change_option,left_target_lanelet,right_target_lanelet,target_lanelet_id);
+
+                ROS_DEBUG_STREAM("found target_lanelet_id: " << target_lanelet_id);
 
                 if (lane_change_option==1)
                 {
-                    target_lanelet=right_target_lanelet;
+                    target_lanelet=left_target_lanelet;
                     // check if the lanelet is enough to do the lane change
                     target_lane_center_loc = target_lanelet.centerline2d().back();
                     double target_downtrack = wm_->routeTrackPos(target_lane_center_loc).downtrack;

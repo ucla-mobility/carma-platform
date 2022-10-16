@@ -1,3 +1,4 @@
+<?xml version="1.0"?>
 <!--
 
   Copyright (C) 2018-2020 LEIDOS.
@@ -21,7 +22,7 @@ Loads parameters and configures logging for the node
  
 -->
 <launch>
-    <node name="cooperative_lanechange" pkg="cooperative_lanechange" type="cooperative_lanechange" output="log">
+    <node name="cooperative_lanechange" pkg="cooperative_lanechange" type="cooperative_lanechange" output="screen">
       <rosparam command="load" file="$(find cooperative_lanechange)/config/parameters.yaml"/>
     </node>
 </launch>

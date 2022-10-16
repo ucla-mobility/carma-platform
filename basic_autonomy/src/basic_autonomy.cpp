@@ -82,7 +82,8 @@ namespace basic_autonomy
             // A general fix will be implemented soon. (issue #1863)
             bool lanelets_defined = !maneuver.lane_following_maneuver.lane_ids.empty();
             ROS_DEBUG_STREAM("lanelets_defined: " << lanelets_defined);
-            bool isFromPlatooning = maneuver.lane_following_maneuver.parameters.planning_strategic_plugin == "EmergencyPullOverStrategicPlugin";
+            bool isFromPlatooning = (maneuver.lane_following_maneuver.parameters.planning_strategic_plugin == "EmergencyPullOverStrategicPlugin" || 
+                                    maneuver.lane_following_maneuver.parameters.planning_strategic_plugin == "EmergencyVehicleStrategicPlugin" );
             ROS_DEBUG_STREAM("isFromPlatooning: " << isFromPlatooning);
 
             if (lanelets_defined && isFromPlatooning)
@@ -307,6 +308,9 @@ namespace basic_autonomy
             lanelet::BasicLineString2d current_lanelet_centerline = starting_lanelet.centerline2d().basicLineString();
             lanelet::ConstLanelet current_lanelet = starting_lanelet;
             reference_centerline.insert(reference_centerline.end(), current_lanelet_centerline.begin(), current_lanelet_centerline.end());
+
+            ROS_DEBUG_STREAM("basicautonomy current_lanelet " <<std::to_string(current_lanelet.id()) );
+            ROS_DEBUG_STREAM("basicautonomy ending_lanelet " <<std::to_string(ending_lanelet.id()) );
 
             ROS_DEBUG_STREAM("Searching for shared boundary with starting lanechange lanelet " << std::to_string(current_lanelet.id()) << " and ending lanelet " << std::to_string(ending_lanelet.id()));
             while(!shared_boundary_found){
