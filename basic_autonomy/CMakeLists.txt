@@ -109,13 +109,3 @@ install(DIRECTORY include/${PROJECT_NAME}/
   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
 )
 
-
-#############
-## Testing ##
-#############
-                           
-catkin_add_gmock(${PROJECT_NAME}-test 
-  test/test_waypoint_generation.cpp
-)
-target_link_libraries(${PROJECT_NAME}-test basic_autonomy ${catkin_LIBRARIES})
-

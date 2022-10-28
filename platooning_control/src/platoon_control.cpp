@@ -77,6 +77,7 @@ namespace platoon_control
 
 		// Control Publisher
 		twist_pub_ = nh_->advertise<geometry_msgs::TwistStamped>("twist_raw", 5, true);
+        controller_setting_pub_=nh_->advertise<std_msgs::Float32>("controller_setting", 5, true);
         ctrl_pub_ = nh_->advertise<autoware_msgs::ControlCommandStamped>("ctrl_raw", 5, true);
         platoon_info_pub_ = nh_->advertise<cav_msgs::PlatooningInfo>("platooning_info", 1, true);
 
@@ -151,6 +152,15 @@ namespace platoon_control
         trajectory_speed_ = getTrajectorySpeed(latest_trajectory_.trajectory_points);
         
         generateControlSignals(second_trajectory_point, lookahead_point); 
+
+        //publish information for cooperative plugin xx
+        double lookahead_dist = config_.lookaheadRatio * current_speed_;
+        ROS_DEBUG_STREAM("lookahead based on speed: " << lookahead_dist);
+        lookahead_dist = std::max(config_.minLookaheadDist, lookahead_dist);
+        ROS_DEBUG_STREAM("final lookahead xx: " << lookahead_dist);
+        std_msgs::Float32 msg;
+        msg.data=lookahead_dist;
+        controller_setting_pub_.publish(msg);
 
         return true;
     }   
@@ -277,7 +287,7 @@ namespace platoon_control
         cmd_ctrl.header.stamp = ros::Time::now();
         cmd_ctrl.cmd.linear_velocity = linear_vel;
         ROS_DEBUG_STREAM("ctrl command speed " << cmd_ctrl.cmd.linear_velocity);
-        cmd_ctrl.cmd.steering_angle = steering_angle;
+        cmd_ctrl.cmd.steering_angle = steering_angle-0.0/20.7/2;
         ROS_DEBUG_STREAM("ctrl command steering " << cmd_ctrl.cmd.steering_angle);
 
         return cmd_ctrl;

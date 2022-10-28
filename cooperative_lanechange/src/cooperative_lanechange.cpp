@@ -57,6 +57,8 @@ namespace cooperative_lanechange
         pose_sub_ = nh_->subscribe("current_pose", 1, &CooperativeLaneChangePlugin::pose_cb, this);
         twist_sub_ = nh_->subscribe("current_velocity", 1, &CooperativeLaneChangePlugin::twist_cd, this);
         incoming_mobility_response_ = nh_->subscribe("incoming_mobility_response", 1 , &CooperativeLaneChangePlugin::mobilityresponse_cb, this);
+
+        controller_setting_sub_=nh_->subscribe("controller_setting", 1, &CooperativeLaneChangePlugin::controller_setting, this);
         
         georeference_sub_ = nh_->subscribe("georeference", 1, &CooperativeLaneChangePlugin::georeference_callback, this);
         
@@ -101,6 +103,11 @@ namespace cooperative_lanechange
             [this](const auto&) { cooperative_lanechange_plugin_discovery_pub_.publish(plugin_discovery_msg_); });
 
         //@SONAR_START@
+    }
+
+    void CooperativeLaneChangePlugin::controller_setting(const std_msgs::Float32& msg)
+    {
+        controler_look_ahead_distance_=msg.data;
     }
 
     void CooperativeLaneChangePlugin::mobilityresponse_cb(const cav_msgs::MobilityResponse &msg){
@@ -222,6 +229,9 @@ namespace cooperative_lanechange
     bool CooperativeLaneChangePlugin::plan_trajectory_cb(cav_srvs::PlanTrajectoryRequest &req, cav_srvs::PlanTrajectoryResponse &resp){
         //@SONAR_STOP@
         //  Only plan the trajectory for the requested LANE_CHANGE maneuver
+
+        ros::Time request_sent_time_coop_lane_change = ros::Time::now();
+
         if (!clc_called_)
         {
             clc_called_ = true;
@@ -247,8 +257,18 @@ namespace cooperative_lanechange
 
         if(current_downtrack < maneuver_plan[0].lane_change_maneuver.start_dist - starting_downtrack_range_){
             ROS_DEBUG_STREAM("Lane change trajectory will not be planned. current_downtrack is more than " << starting_downtrack_range_ << " meters before starting CLC downtrack");
+            
+            ros::Time planning_end_time_coop_lane_change = ros::Time::now();
+            ros::Duration passed_time_coop_lane_change = planning_end_time_coop_lane_change - request_sent_time_coop_lane_change;
+            ROS_DEBUG_STREAM("Cooperative lane change processing time = "<<passed_time_coop_lane_change);
+
             return true;
         }
+
+        ros::Time request_sent_time_coop_lane_change_1 = ros::Time::now();
+        ros::Duration passed_time_coop_lane_change_1 = request_sent_time_coop_lane_change_1 - request_sent_time_coop_lane_change;
+        ROS_DEBUG_STREAM("Cooperative lane change processing time 1 = "<<passed_time_coop_lane_change_1);
+
         auto current_lanelets = lanelet::geometry::findNearest(wm_->getMap()->laneletLayer, veh_pos, 10);       
         long current_lanelet_id = current_lanelets[0].second.id();
         if(current_lanelet_id == target_lanelet_id && current_downtrack >= target_downtrack - destination_range_){
@@ -303,6 +323,11 @@ namespace cooperative_lanechange
         //plan lanechange without filling in response
         ROS_DEBUG_STREAM("Planning lane change trajectory");
 
+        ros::Time request_sent_time_coop_lane_change_2 = ros::Time::now();
+        ros::Duration passed_time_coop_lane_change_2 = request_sent_time_coop_lane_change_2 - request_sent_time_coop_lane_change_1;
+        ROS_DEBUG_STREAM("Cooperative lane change processing time 2 = "<<passed_time_coop_lane_change_2);
+
+
         std::string maneuver_id = maneuver_plan[0].lane_change_maneuver.parameters.maneuver_id;
         if (original_lc_maneuver_values_.find(maneuver_id) == original_lc_maneuver_values_.end()) {
             // If this lane change maneuver ID is being received for this first time, store its original start_dist and starting_lane_id locally
@@ -329,7 +354,17 @@ namespace cooperative_lanechange
             }
         }
 
+        ros::Time request_sent_time_coop_lane_change_3 = ros::Time::now();
+        ros::Duration passed_time_coop_lane_change_3 = request_sent_time_coop_lane_change_3 - request_sent_time_coop_lane_change_2;
+        ROS_DEBUG_STREAM("Cooperative lane change processing time 3 = "<<passed_time_coop_lane_change_3);
+
+
         std::vector<cav_msgs::TrajectoryPlanPoint> planned_trajectory_points = plan_lanechange(req);
+
+        ros::Time planning_end_time_coop_lane_change_4 = ros::Time::now();
+        ros::Duration passed_time_coop_lane_change_4 = planning_end_time_coop_lane_change_4 - request_sent_time_coop_lane_change_3;
+        ROS_DEBUG_STREAM("Cooperative lane change processing time 4 = "<<passed_time_coop_lane_change_4);
+
         
         if(negotiate){
             ROS_DEBUG_STREAM("Negotiating");
@@ -346,6 +381,7 @@ namespace cooperative_lanechange
             lc_status_msg.description = "Requested lane merge";
             lanechange_status_pub_.publish(lc_status_msg);
         }
+
 
         //if ack mobility response, send lanechange response
         if(!negotiate || is_lanechange_accepted_){
@@ -372,6 +408,9 @@ namespace cooperative_lanechange
             }
  
         }
+        ros::Time planning_end_time_coop_lane_change_5 = ros::Time::now();
+        ros::Duration passed_time_coop_lane_change_5 = planning_end_time_coop_lane_change_5 - planning_end_time_coop_lane_change_4;
+        ROS_DEBUG_STREAM("Cooperative lane change processing time 5 = "<<passed_time_coop_lane_change_5);
         //@SONAR_START@
         return true;
     }
@@ -543,19 +582,19 @@ namespace cooperative_lanechange
         std::string maneuver_id = maneuver_plan.front().lane_change_maneuver.parameters.maneuver_id;
         double original_start_dist = current_downtrack; // Initialize so original_start_dist cannot be less than the current downtrack
         if (original_lc_maneuver_values_.find(maneuver_id) != original_lc_maneuver_values_.end()) {
-            // // Obtain the original start_dist associated with this lane change maneuver
-            // original_start_dist = original_lc_maneuver_values_[maneuver_id].original_start_dist;
-            // ROS_DEBUG_STREAM("Maneuver id " << maneuver_id << " original start_dist is " << original_start_dist);
+            // Obtain the original start_dist associated with this lane change maneuver
+            original_start_dist = original_lc_maneuver_values_[maneuver_id].original_start_dist;
+            ROS_DEBUG_STREAM("Maneuver id " << maneuver_id << " original start_dist is " << original_start_dist);
 
-            // // Set this maneuver's starting_lane_id to the original starting_lane_id associated with this lane change maneuver
-            // maneuver_plan.front().lane_change_maneuver.starting_lane_id = original_lc_maneuver_values_[maneuver_id].original_starting_lane_id;
-            // ROS_DEBUG_STREAM("Updated maneuver id " << maneuver_id << " starting_lane_id to its original value of " << original_lc_maneuver_values_[maneuver_id].original_starting_lane_id);
+            // Set this maneuver's starting_lane_id to the original starting_lane_id associated with this lane change maneuver
+            maneuver_plan.front().lane_change_maneuver.starting_lane_id = original_lc_maneuver_values_[maneuver_id].original_starting_lane_id;
+            ROS_DEBUG_STREAM("Updated maneuver id " << maneuver_id << " starting_lane_id to its original value of " << original_lc_maneuver_values_[maneuver_id].original_starting_lane_id);
 
-            // // If the vehicle has started this lane change, set the request's vehicle_state.longitudinal_vel to the velocity that the vehicle began this lane change at
-            // if(original_lc_maneuver_values_[maneuver_id].has_started) {
-            //     req.vehicle_state.longitudinal_vel = original_lc_maneuver_values_[maneuver_id].original_longitudinal_vel_ms;
-            //     ROS_DEBUG_STREAM("Updating vehicle_state.longitudinal_vel to the initial lane change value of " << original_lc_maneuver_values_[maneuver_id].original_longitudinal_vel_ms);
-            // }
+            // If the vehicle has started this lane change, set the request's vehicle_state.longitudinal_vel to the velocity that the vehicle began this lane change at
+            if(original_lc_maneuver_values_[maneuver_id].has_started) {
+                req.vehicle_state.longitudinal_vel = original_lc_maneuver_values_[maneuver_id].original_longitudinal_vel_ms;
+                ROS_DEBUG_STREAM("Updating vehicle_state.longitudinal_vel to the initial lane change value of " << original_lc_maneuver_values_[maneuver_id].original_longitudinal_vel_ms);
+            }
         }
         else {
             ROS_WARN_STREAM("No original values for lane change maneuver were found!");
@@ -564,7 +603,7 @@ namespace cooperative_lanechange
         double starting_downtrack = std::min(current_downtrack, original_start_dist);
 
         ROS_DEBUG_STREAM("before creating lane change geometry!");
-        auto points_and_target_speeds = basic_autonomy::waypoint_generation::create_geometry_profile(maneuver_plan, starting_downtrack ,wm_, ending_state_before_buffer_, req.vehicle_state, wpg_general_config, wpg_detail_config);
+        auto points_and_target_speeds = basic_autonomy::waypoint_generation::create_geometry_profile(maneuver_plan, starting_downtrack ,wm_, ending_state_before_buffer_, req.vehicle_state, wpg_general_config, wpg_detail_config,controler_look_ahead_distance_);
         ROS_DEBUG_STREAM("after creating lane change geometry!");
 
         //Calculate maneuver fraction completed (current_downtrack/(ending_downtrack-starting_downtrack)
@@ -572,12 +611,13 @@ namespace cooperative_lanechange
         auto maneuver_start_dist = maneuver_plan.front().lane_change_maneuver.start_dist;
         maneuver_fraction_completed_ = (maneuver_start_dist - current_downtrack)/(maneuver_end_dist - maneuver_start_dist);
 
-        ROS_DEBUG_STREAM("Maneuvers to points size:"<<points_and_target_speeds.size());
+        ROS_DEBUG_STREAM("Maneuvers to points size: "<<points_and_target_speeds.size());//584
         auto downsampled_points = carma_utils::containers::downsample_vector(points_and_target_speeds, downsample_ratio_);
+        ROS_DEBUG_STREAM("Maneuvers to points size downsampled: "<<points_and_target_speeds.size());//
 
         std::vector<cav_msgs::TrajectoryPlanPoint> trajectory_points = basic_autonomy::waypoint_generation::compose_lanechange_trajectory_from_path(downsampled_points, req.vehicle_state, req.header.stamp,
                                                                                          wm_, ending_state_before_buffer_, wpg_detail_config);
-        ROS_DEBUG_STREAM("Compose Trajectory size:"<<trajectory_points.size());
+        ROS_DEBUG_STREAM("Compose Trajectory size:"<<trajectory_points.size());//336
         return trajectory_points;
 
     }

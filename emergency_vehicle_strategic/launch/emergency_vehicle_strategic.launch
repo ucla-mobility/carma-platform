@@ -24,7 +24,7 @@ UCLA: Update node name, type, and package name accordingly.
  
 -->
 <launch>
-  <node name="emergency_vehicle_strategic" pkg="emergency_vehicle_strategic" type="emergency_vehicle_strategic" output="screen">
+  <node name="emergency_vehicle_strategic" pkg="emergency_vehicle_strategic" type="emergency_vehicle_strategic">
       <rosparam command="load" file="$(find emergency_vehicle_strategic)/config/parameters.yaml" />
     </node>
 </launch>

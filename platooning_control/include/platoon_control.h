@@ -29,7 +29,7 @@
 #include <carma_utils/CARMAUtils.h>
 #include "platoon_control_worker.h"
 #include <std_msgs/Bool.h>
-
+#include <std_msgs/Float32.h>
 
 
 namespace platoon_control
@@ -119,6 +119,7 @@ namespace platoon_control
 			ros::Subscriber emergency_stop_sub_;
         	// ROS Publisher
         	ros::Publisher twist_pub_;
+        	ros::Publisher controller_setting_pub_;
 			ros::Publisher ctrl_pub_;
         	ros::Publisher plugin_discovery_pub_;
 			ros::Publisher platoon_info_pub_;

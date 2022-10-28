@@ -99,6 +99,8 @@ namespace platoon_control_ihp
         */
         void setCurrentSpeed(double speed);
 
+        void setEmergencyStopFlag(bool flag);
+
         /**
          * \brief UCLA: HP gap regulation that calculate the deisred position (Dtd, in m) for the platoon members. 
          * 
@@ -136,6 +138,8 @@ namespace platoon_control_ihp
 
 		// geometry pose
         geometry_msgs::Pose current_pose_;
+
+        bool emergency_stop_flag_ = false;
 
 
     private:

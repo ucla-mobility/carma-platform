@@ -112,6 +112,8 @@ class EmergencyVehicleStrategicPluginNode
             ros::Subscriber route_sub = nh.subscribe("route", 1, &EmergencyVehicleStrategicPlugin::route_cb, &worker);
             ros::Subscriber prepass_decision_sub = nh.subscribe("prepass_decision", 1, &EmergencyVehicleStrategicPlugin::prepass_decision_cb,  &worker);
             
+            ros::Subscriber controller_setting_sub_ = nh.subscribe("controller_setting", 1, &EmergencyVehicleStrategicPlugin::controller_setting_cb,  &worker);
+            
             ros::Timer discovery_pub_timer_ = nh.createTimer(
                     ros::Duration(ros::Rate(10.0)),
                     [&worker](const auto&) { worker.onSpin(); });

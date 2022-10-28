@@ -56,6 +56,11 @@ namespace emergency_vehicle_strategic
         map_projector_ = std::make_shared<lanelet::projection::LocalFrameProjector>(msg->data.c_str()); 
     }
 
+    void EmergencyVehicleStrategicPlugin::controller_setting_cb(std_msgs::Float32 msg)
+    {
+        controler_look_ahead_distance_=msg.data;
+    }
+
     // Find ecef point based on pose message
     cav_msgs::LocationECEF EmergencyVehicleStrategicPlugin::pose_to_ecef(geometry_msgs::PoseStamped pose_msg)
     {
@@ -375,7 +380,7 @@ namespace emergency_vehicle_strategic
         maneuver_msg.lane_change_maneuver.end_dist = end_dist;
         maneuver_msg.lane_change_maneuver.end_speed = target_speed;        
         // Generate a new maneuver ID for the lane change maneuver (not needed for lane following maneuver).
-        maneuver_msg.lane_following_maneuver.parameters.maneuver_id = boost::uuids::to_string(boost::uuids::random_generator()());
+        maneuver_msg.lane_change_maneuver.parameters.maneuver_id = boost::uuids::to_string(boost::uuids::random_generator()());
         
         // because it is a rough plan, assume vehicle can always reach to the target speed in a lanelet
         double cur_plus_target = current_speed + target_speed;
@@ -386,7 +391,7 @@ namespace emergency_vehicle_strategic
         else 
         {
             // maneuver_msg.lane_change_maneuver.end_time = current_time + ros::Duration((end_dist - current_dist) / (0.5 * cur_plus_target));
-            maneuver_msg.lane_change_maneuver.end_time = current_time + ros::Duration(20.0);
+            maneuver_msg.lane_change_maneuver.end_time = current_time + ros::Duration(config_.time_step+controler_look_ahead_distance_/target_speed);
 
         }
 
@@ -424,7 +429,8 @@ namespace emergency_vehicle_strategic
         }
     }
 
-    void EmergencyVehicleStrategicPlugin::check_lane_change_option(lanelet::ConstLanelet starting_lanelet, 
+    void EmergencyVehicleStrategicPlugin::check_lane_change_option(int lane_change_intention,
+																	lanelet::ConstLanelet starting_lanelet, 
                                                                   int& lane_change_option, 
                                                                   lanelet::ConstLanelet& left_target_lanelet,
                                                                   lanelet::ConstLanelet& right_target_lanelet,
@@ -443,27 +449,30 @@ namespace emergency_vehicle_strategic
                 auto relation = wm_->getMapRoutingGraph()->routingRelation(starting_lanelet, llt);
                 ite++;
 
-                // if right lane exist
-                if (relation == lanelet::routing::RelationType::Right) //currently, we only consider that there are two lanes!
+                if (lane_change_intention==2)
                 {
-                    // select target lanelet
-                    target_lanelet_id = id;
-                    ROS_DEBUG_STREAM("Right lane change possible, right side target_lanelet_id: " << id);
-                    lane_change_option=2;
-                    right_target_lanelet = llt;
-
-                    break;
-                }
-                else if(relation == lanelet::routing::RelationType::Left)
-                {
-                    // select target lanelet
-                    target_lanelet_id = id;
-                    ROS_DEBUG_STREAM("Left lane change possible, left side target_lanelet_id: " << id);
-                    lane_change_option=1;
-                    left_target_lanelet = llt;
-
-                    break;
-                }
+	                // if right lane exist
+	                if (relation == lanelet::routing::RelationType::Right) //currently, we only consider that there are two lanes!
+	                {
+	                    // select target lanelet
+	                    target_lanelet_id = id;
+	                    ROS_DEBUG_STREAM("Right lane change possible, right side target_lanelet_id: " << id);
+	                    lane_change_option=2;
+	                    right_target_lanelet = llt;
+	                    break;
+	                }                
+            	}else if (lane_change_intention==1)
+            	{
+	                if(relation == lanelet::routing::RelationType::Left)
+	                {
+	                    // select target lanelet
+	                    target_lanelet_id = id;
+	                    ROS_DEBUG_STREAM("Left lane change possible, left side target_lanelet_id: " << id);
+	                    lane_change_option=1;
+	                    left_target_lanelet = llt;
+	                    break;
+	                }
+            	}
                 else
                 {
                     lane_change_option=0;
@@ -533,7 +542,8 @@ namespace emergency_vehicle_strategic
 
         // read status data
         double current_progress = wm_->routeTrackPos(current_loc).downtrack;
-        ROS_DEBUG_STREAM("current downtrack: " << current_progress);
+        double current_downtrack=current_progress;
+        ROS_DEBUG_STREAM("current downtrack: " << current_downtrack);
         double speed_progress = current_speed_;
         ros::Time time_progress = ros::Time::now();
         
@@ -544,16 +554,16 @@ namespace emergency_vehicle_strategic
         double route_length =  wm_->getRouteEndTrackPos().downtrack; 
         total_maneuver_length = std::min(total_maneuver_length, route_length);
        
-        // Update current status based on prior plan
-        if(req.prior_plan.maneuvers.size()!= 0)
-        {
-            ROS_DEBUG_STREAM("Provided with initial plan...");
-            time_progress = req.prior_plan.planning_completion_time;
-            ROS_DEBUG_STREAM("Prior plan time progress...xxx"<<time_progress);
-            int end_lanelet = 0;
-            updateCurrentStatus(req.prior_plan.maneuvers.back(), speed_progress, current_progress, end_lanelet);
-            last_lanelet_index = findLaneletIndexFromPath(end_lanelet, shortest_path);
-        }
+        // // Update current status based on prior plan
+        // if(req.prior_plan.maneuvers.size()!= 0)
+        // {
+        //     ROS_DEBUG_STREAM("Provided with initial plan...");
+        //     time_progress = req.prior_plan.planning_completion_time;
+        //     ROS_DEBUG_STREAM("Prior plan time progress...xxx"<<time_progress);
+        //     int end_lanelet = 0;
+        //     updateCurrentStatus(req.prior_plan.maneuvers.back(), speed_progress, current_progress, end_lanelet);
+        //     last_lanelet_index = findLaneletIndexFromPath(end_lanelet, shortest_path);
+        // }
         
         ROS_DEBUG_STREAM("Starting Loop");
         ROS_DEBUG_STREAM("total_maneuver_length: " << total_maneuver_length << " route_length: " << route_length);
@@ -562,18 +572,26 @@ namespace emergency_vehicle_strategic
         // Note: Use current_lanelet list (which was determined based on vehicle pose) to find current lanelet ID. 
         long current_lanelet_id = current_lanelets[0].second.id();
         ROS_DEBUG_STREAM("current_lanelet_id: " << current_lanelet_id);
+
+
+        // lanelet::ConstLanelet specific_lanelet = wm_->getMap()->laneletLayer.get(1073);
+        // auto lanelet_point_center_line_=specific_lanelet.centerline2d();
+        // auto size_lanelet_points=lanelet_point_center_line_.size();
+        // lanelet::BasicPoint2d lanelet_point=lanelet_point_center_line_[size_lanelet_points-10];
+        // ROS_DEBUG_STREAM("found point in lanelet"<<lanelet_point.x()<<", "<<lanelet_point.y());       
+
         
         // rear emergency vehicle detected: right lane change maneuver
-        if (rear_emergency_vehicle_detected_ || left_lane_change_finish_)
+        if (rear_emergency_vehicle_detected_ || left_lane_change_finished_)
+        // if (false)
         {   
             ROS_DEBUG_STREAM("Start to handle rear emergence vehicle detected case");
             // init right lane indicator 
-            bool isLaneChangeFinished;
             lanelet::BasicPoint2d target_lane_center_loc;
             
             // target_lanelet = wm_->getMapRoutingGraph()->right(current_lanelet).get();
             // ROS_DEBUG_STREAM("target_lanelet.id(): " << target_lanelet.id());
-            ROS_DEBUG_STREAM("Planning lane change maneuver with right lane!");
+            ROS_DEBUG_STREAM("Planning lane change maneuver with right lane!");          
             
             // send out lane change plan
             while (current_progress < total_maneuver_length)
@@ -600,7 +618,8 @@ namespace emergency_vehicle_strategic
                 int ite = 0;
                 int lane_change_option=0;
                 lanelet::ConstLanelet left_target_lanelet,right_target_lanelet;
-                check_lane_change_option(starting_lanelet,lane_change_option,left_target_lanelet,right_target_lanelet,target_lanelet_id);
+                int lane_change_intention=2;
+                check_lane_change_option(lane_change_intention,starting_lanelet,lane_change_option,left_target_lanelet,right_target_lanelet,target_lanelet_id);
 
                 ROS_DEBUG_STREAM("found target_lanelet_id: " << target_lanelet_id);
 
@@ -614,12 +633,15 @@ namespace emergency_vehicle_strategic
                    // look for connecting lanelet if the current right lanelet is about to end
                     while(target_downtrack<lc_end_dist)
                     {
-                        if (!wm_->getMapRoutingGraph()->following(current_lanelet, false).empty())
+                        ROS_DEBUG_STREAM(" While loop!!!!!! "<<"lc_end_dist = "<<lc_end_dist);
+                        if (!wm_->getMapRoutingGraph()->following(target_lanelet, false).empty())
                         {
-                            target_lanelet = wm_->getMapRoutingGraph()->following(current_lanelet, false).front();
+                            target_lanelet = wm_->getMapRoutingGraph()->following(target_lanelet, false).front();
                             target_lane_center_loc = target_lanelet.centerline2d().back();
                             target_downtrack=wm_->routeTrackPos(target_lane_center_loc).downtrack;
+                            ROS_DEBUG_STREAM(" While loop!!!!!! "<<"target_downtrack = "<<target_downtrack);
                             target_lanelet_id=target_lanelet.id();
+                            ROS_DEBUG_STREAM(" While loop!!!!!! "<<"target_lanelet_id = "<<target_lanelet_id);
                         }else
                         {
                             ROS_DEBUG_STREAM(" Can not find target lanelet with enough downtrack! ");
@@ -629,35 +651,50 @@ namespace emergency_vehicle_strategic
                     }
                     lanechangePossible = true;
                     // monitor 
-                    double target_crosstrack = wm_->routeTrackPos(target_lane_center_loc).crosstrack;
-                    ROS_DEBUG_STREAM("Find target lanelet, start to monitor lane change status... ");
-                    ROS_DEBUG_STREAM("target_crosstrack: " << target_crosstrack);
-                    ROS_DEBUG_STREAM("current_crosstrack_: " << current_crosstrack_);
-                    double crosstrackDiff = current_crosstrack_ - target_crosstrack; 
-                    lane_change_finished_ = abs(crosstrackDiff) <= config_.lane_width*config_.em_lane_ctd_check_ratio; 
-                    ROS_DEBUG_STREAM("crosstrackDiff: " << crosstrackDiff);
-                    ROS_DEBUG_STREAM("is LaneChange Finished: " << lane_change_finished_); //TODO: use this variable to determine lane-change status  
-                }
+                    // double target_crosstrack = wm_->routeTrackPos(target_lane_center_loc).crosstrack;
+                    // ROS_DEBUG_STREAM("Find target lanelet, start to monitor lane change status... ");
+                    // ROS_DEBUG_STREAM("target_crosstrack: " << target_crosstrack);
+                    // ROS_DEBUG_STREAM("current_crosstrack_: " << current_crosstrack_);
+                    // double crosstrackDiff = current_crosstrack_ - target_crosstrack; 
+                    // right_lane_change_finished_ = abs(crosstrackDiff) <= config_.lane_width*config_.em_lane_ctd_check_ratio; 
+                    // ROS_DEBUG_STREAM("crosstrackDiff: " << crosstrackDiff);
+                    // ROS_DEBUG_STREAM("is LaneChange Finished: " << right_lane_change_finished_); //TODO: use this variable to determine lane-change status  
+                }        
 
                 // send plan 
-                if (lanechangePossible)
+                if (lanechangePossible && (!right_lane_change_sent_))
                 {
-                    ROS_DEBUG_STREAM("Lane change possible, planning it.. " );
+                    ROS_DEBUG_STREAM("Right lane change possible, planning it.. " );
                     cav_msgs::Maneuver maneuver_msg_=composeLaneChangeManeuverMessage(current_progress, lc_end_dist,  
                                         speed_progress, target_speed, current_lanelet_id, target_lanelet_id , time_progress);
                     resp.new_plan.maneuvers.push_back(maneuver_msg_);
                     resp.new_plan.planning_completion_time=maneuver_msg_.lane_change_maneuver.end_time;
-                    ROS_DEBUG_STREAM("resp.new_plan.planning_completion_time = "<<resp.new_plan.planning_completion_time);                        
+                    ROS_DEBUG_STREAM("resp.new_plan.planning_completion_time = "<<resp.new_plan.planning_completion_time);
+                    right_lane_change_sent_=true;
+                    lane_change_maneuverplan_=resp.new_plan;
+                    ROS_DEBUG_STREAM("Saved lane change maneuver plan and waiting to be finished ");
+                    right_lane_change_finished_downtrack_=total_maneuver_length+controler_look_ahead_distance_;
+                    ROS_DEBUG_STREAM("right_lane_change_finished_downtrack_ = "<<right_lane_change_finished_downtrack_);                        
                 }
+
+                else if (right_lane_change_sent_  &&  (!right_lane_change_finished_))
+                {
+                    resp.new_plan=lane_change_maneuverplan_;
+                    ROS_DEBUG_STREAM("Repeat lane change maneuver plan. Awaiting lane change finished ");
+                    //need to adjust the end time according to the planed trajectory;
+                }
+                
                 else
                 {
+                    ROS_DEBUG_STREAM("Right lane change finished and reset right_lane_change_sent_ as false");
+                    right_lane_change_sent_=false;
                     // use reduced target speed after lane change
                     target_speed = target_speed*config_.lane_change_speed_adjustment;   //get Speed Limit
                     total_maneuver_length = current_progress + config_.time_step * target_speed;
                     total_maneuver_length = std::min(total_maneuver_length, route_length);
                     double end_dist = total_maneuver_length;
                     // mark lane change finish position
-                    if (lane_change_finish_dtd_ == 0.0) {lane_change_finish_dtd_ = total_maneuver_length;}
+                    if (right_lane_change_finish_dtd_ == 0.0) {right_lane_change_finish_dtd_ = total_maneuver_length;}
 
                     // log maneuver data
                     ROS_DEBUG_STREAM("Same Lane Maneuver after lane change (right lane not available)! ");
@@ -680,7 +717,7 @@ namespace emergency_vehicle_strategic
                     ROS_DEBUG_STREAM("resp.new_plan.planning_completion_time = "<<resp.new_plan.planning_completion_time);
 
                     // send stop notice once lane following dtd in emergency lane pass threshold (vehicle length)
-                    if (current_downtrack_ - lane_change_finish_dtd_ >= config_.vehicle_length)
+                    if (current_downtrack_ - right_lane_change_finish_dtd_ >= config_.vehicle_length)
                     {
                         // publish stop notice 
                         std_msgs::Bool stop_v_msg;
@@ -690,16 +727,23 @@ namespace emergency_vehicle_strategic
                     }
                 } // send plan (lane change vs in lane cruising)
 
+                if (current_downtrack_>right_lane_change_finished_downtrack_+5)
+                {
+                    right_lane_change_finished_=true;
+                    ROS_DEBUG_STREAM("Right lane change has finished and set right_lane_change_finished_ as true!");
+                }
+
                 // update lane change variables 
                 current_progress += dist_diff;
                 time_progress = resp.new_plan.maneuvers.back().lane_change_maneuver.end_time;
                 speed_progress = target_speed;
+
                 if(current_progress >= total_maneuver_length)
                 {
                     break;
                 }
 
-                ++last_lanelet_index;
+                // ++last_lanelet_index;
             }// while loop send out lane change plan
 
             // Note: lane change finished was determined by checking right lane existance. 
@@ -712,7 +756,6 @@ namespace emergency_vehicle_strategic
         {
             ROS_DEBUG_STREAM("Start to handle front emergence vehicle detected case");
             // init right lane indicator 
-            bool isLaneChangeFinished;
             lanelet::BasicPoint2d target_lane_center_loc;
             
             // target_lanelet = wm_->getMapRoutingGraph()->right(current_lanelet).get();
@@ -744,7 +787,8 @@ namespace emergency_vehicle_strategic
                 int ite = 0;
                 int lane_change_option=0;
                 lanelet::ConstLanelet left_target_lanelet,right_target_lanelet;
-                check_lane_change_option(starting_lanelet,lane_change_option,left_target_lanelet,right_target_lanelet,target_lanelet_id);
+                int lane_change_intention=1;
+                check_lane_change_option(lane_change_intention,starting_lanelet,lane_change_option,left_target_lanelet,right_target_lanelet,target_lanelet_id);
 
                 ROS_DEBUG_STREAM("found target_lanelet_id: " << target_lanelet_id);
 
@@ -757,12 +801,15 @@ namespace emergency_vehicle_strategic
                    // look for connecting lanelet if the current right lanelet is about to end
                     while(target_downtrack<lc_end_dist)
                     {
-                        if (!wm_->getMapRoutingGraph()->following(current_lanelet, false).empty())
+                        ROS_DEBUG_STREAM(" While loop!!!!!! "<<"lc_end_dist = "<<lc_end_dist);
+                        if (!wm_->getMapRoutingGraph()->following(target_lanelet, false).empty())
                         {
-                            target_lanelet = wm_->getMapRoutingGraph()->following(current_lanelet, false).front();
+                            target_lanelet = wm_->getMapRoutingGraph()->following(target_lanelet, false).front();
                             target_lane_center_loc = target_lanelet.centerline2d().back();
                             target_downtrack=wm_->routeTrackPos(target_lane_center_loc).downtrack;
+                            ROS_DEBUG_STREAM(" While loop!!!!!! "<<"target_downtrack = "<<target_downtrack);
                             target_lanelet_id=target_lanelet.id();
+                            ROS_DEBUG_STREAM(" While loop!!!!!! "<<"target_lanelet_id = "<<target_lanelet_id);
                         }else
                         {
                             ROS_DEBUG_STREAM(" Can not find target lanelet with enough downtrack! ");
@@ -772,28 +819,40 @@ namespace emergency_vehicle_strategic
                     }
                     lanechangePossible = true;
                     // monitor 
-                    double target_crosstrack = wm_->routeTrackPos(target_lane_center_loc).crosstrack;
-                    ROS_DEBUG_STREAM("Find target lanelet, start to monitor lane change status... ");
-                    ROS_DEBUG_STREAM("target_crosstrack: " << target_crosstrack);
-                    ROS_DEBUG_STREAM("current_crosstrack_: " << current_crosstrack_);
-                    double crosstrackDiff = current_crosstrack_ - target_crosstrack; 
-                    lane_change_finished_ = abs(crosstrackDiff) <= config_.lane_width*config_.em_lane_ctd_check_ratio; 
-                    ROS_DEBUG_STREAM("crosstrackDiff: " << crosstrackDiff);
-                    ROS_DEBUG_STREAM("is LaneChange Finished: " << lane_change_finished_); //TODO: use this variable to determine lane-change status  
+                    // double target_crosstrack = wm_->routeTrackPos(target_lane_center_loc).crosstrack;
+                    // ROS_DEBUG_STREAM("Find target lanelet, start to monitor lane change status... ");
+                    // ROS_DEBUG_STREAM("target_crosstrack: " << target_crosstrack);
+                    // ROS_DEBUG_STREAM("current_crosstrack_: " << current_crosstrack_);
+                    // double crosstrackDiff = current_crosstrack_ - target_crosstrack; 
+                    // lane_change_finished_ = abs(crosstrackDiff) <= config_.lane_width*config_.em_lane_ctd_check_ratio; 
+                    // ROS_DEBUG_STREAM("crosstrackDiff: " << crosstrackDiff);
+                    // ROS_DEBUG_STREAM("is LaneChange Finished: " << lane_change_finished_); //TODO: use this variable to determine lane-change status  
                 }
-
                 // send plan 
                 if (lanechangePossible)
                 {
-                    ROS_DEBUG_STREAM("Lane change possible, planning it.. " );
+                    ROS_DEBUG_STREAM("Left lane change possible, planning it.. " );
                     cav_msgs::Maneuver maneuver_msg_=composeLaneChangeManeuverMessage(current_progress, lc_end_dist,  
                                         speed_progress, target_speed, current_lanelet_id, target_lanelet_id , time_progress);
                     resp.new_plan.maneuvers.push_back(maneuver_msg_);
                     resp.new_plan.planning_completion_time=maneuver_msg_.lane_change_maneuver.end_time;
-                    ROS_DEBUG_STREAM("resp.new_plan.planning_completion_time = "<<resp.new_plan.planning_completion_time);                        
+                    left_lane_change_sent_=true;
+                    lane_change_maneuverplan_=resp.new_plan;
+                    ROS_DEBUG_STREAM("resp.new_plan.planning_completion_time = "<<resp.new_plan.planning_completion_time);
+                    left_lane_change_finished_downtrack_=total_maneuver_length+controler_look_ahead_distance_;
+                    ROS_DEBUG_STREAM("left_lane_change_finished_downtrack_ = "<<left_lane_change_finished_downtrack_);                        
                 }
+                else if (left_lane_change_sent_  &&  (!left_lane_change_finished_))
+                {
+                    resp.new_plan=lane_change_maneuverplan_;
+                    ROS_DEBUG_STREAM("Repeat left lane change maneuver plan. Awaiting left lane change finished ");
+                    //need to adjust the end time according to the planed trajectory;
+                }
+                
                 else
                 {
+                    ROS_DEBUG_STREAM("Left lane change finished and reset left_lane_change_sent_ as false");
+                    left_lane_change_sent_=false;
                     // use reduced target speed after lane change
                     target_speed = target_speed*config_.lane_change_speed_adjustment;   //get Speed Limit
                     total_maneuver_length = current_progress + config_.time_step * target_speed;
@@ -822,13 +881,13 @@ namespace emergency_vehicle_strategic
                     resp.new_plan.planning_completion_time=maneuver_msg_.lane_following_maneuver.end_time;
                     ROS_DEBUG_STREAM("resp.new_plan.planning_completion_time = "<<resp.new_plan.planning_completion_time);
 
-                    // send stop notice once lane following dtd in emergency lane pass threshold (vehicle length)
-                    if (current_downtrack_ - left_lane_change_finish_dtd_ >= config_.left_path_safety_distance)
-                    {
-                        // publish stop notice 
-                        left_lane_change_finish_=true;
-                    }
                 } // send plan (lane change vs in lane cruising)
+
+                if (current_downtrack_>left_lane_change_finished_downtrack_+5)
+                {
+                    left_lane_change_finished_=true;
+                    ROS_DEBUG_STREAM("Left lane change has finished and set left_lane_change_finished_ as true!");
+                }
 
                 // update lane change variables 
                 current_progress += dist_diff;

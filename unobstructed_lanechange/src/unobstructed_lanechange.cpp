@@ -122,8 +122,9 @@ namespace unobstructed_lanechange
 
         ROS_DEBUG_STREAM("Current downtrack:"<<current_downtrack);
 
+        double controler_look_ahead_distance=20;
         auto points_and_target_speeds = basic_autonomy::waypoint_generation::create_geometry_profile(maneuver_plan, current_downtrack,wm_, 
-                                                    ending_state_before_buffer_, req.vehicle_state, wpg_general_config, wpg_detail_config);
+                                                    ending_state_before_buffer_, req.vehicle_state, wpg_general_config, wpg_detail_config,controler_look_ahead_distance);
         ROS_DEBUG_STREAM("Maneuvers to points size:"<<points_and_target_speeds.size());
         auto downsampled_points = carma_utils::containers::downsample_vector(points_and_target_speeds, downsample_ratio_);
 

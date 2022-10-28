@@ -45,6 +45,11 @@ namespace platoon_control_ihp
 		current_pose_ = msg.pose;
 	}
 
+    void PlatoonControlIHPWorker::setEmergencyStopFlag(bool flag)
+    {
+        emergency_stop_flag_=flag;
+    }
+
     double PlatoonControlIHPWorker::getIHPTargetPositionFollower(double leaderCurrentPosition)
     {
         /**
@@ -207,9 +212,17 @@ namespace platoon_control_ihp
             ROS_DEBUG_STREAM("The speed command after max accel cap is: " << speed_cmd << " m/s");
         }
 
-        speedCmd_ = speed_cmd;
+        if (!emergency_stop_flag_)
+        {
+            speedCmd_ = speed_cmd;
+            lastCmdSpeed = speedCmd_;
+        }
+        else
+        {
+            speedCmd_ = 0;
+            lastCmdSpeed = 0;
+        }
 
-        lastCmdSpeed = speedCmd_;
 
     }
 
@@ -219,8 +232,18 @@ namespace platoon_control_ihp
         pp_.velocity_ = currentSpeed;
 
         pp_.calculateSteer(point);
-    	steerCmd_ = pp_.getSteeringAngle(); 
-        angVelCmd_ = pp_.getAngularVelocity();
+
+        if (!emergency_stop_flag_)
+        {
+            steerCmd_ = pp_.getSteeringAngle(); 
+            angVelCmd_ = pp_.getAngularVelocity();
+        }else
+        {
+            steerCmd_=0;
+            angVelCmd_=0;
+        }
+
+
     }
 
     // TODO get the actual leader from strategic plugin

@@ -63,6 +63,8 @@
 #include <std_msgs/String.h>
 #include <carma_wm/TrafficControl.h>
 #include <std_msgs/Bool.h>
+#include <std_msgs/Float32.h>
+#include <cav_msgs/ManeuverPlan.h>
 
 
 namespace emergency_vehicle_strategic
@@ -231,13 +233,16 @@ namespace emergency_vehicle_strategic
             /**
                 check if lane change possible and return corresponding lanelet
             */
-            void check_lane_change_option(lanelet::ConstLanelet starting_lanelet, 
+            void check_lane_change_option(int lane_change_intention,
+                                            lanelet::ConstLanelet starting_lanelet, 
                                                                   int& lane_change_option, 
                                                                   lanelet::ConstLanelet& left_target_lanelet,
                                                                   lanelet::ConstLanelet& right_target_lanelet,
                                                                   int& target_lanelet_id);
 
             void prepass_decision_cb(const std_msgs::StringConstPtr& msg);
+
+            void controller_setting_cb(std_msgs::Float32 msg);
             
             // public global variable
 
@@ -252,6 +257,11 @@ namespace emergency_vehicle_strategic
 
             // speed below which will be considered as stop, non-zero value allows for sensor noise
             const double STOPPED_SPEED = 0.5; // m/s
+
+            cav_msgs::ManeuverPlan lane_change_maneuverplan_;
+
+            double right_lane_change_finished_downtrack_=0;
+            double left_lane_change_finished_downtrack_=0;
 
         private: 
 
@@ -314,16 +324,22 @@ namespace emergency_vehicle_strategic
             bool is_pull_over_initiated = false; 
 
             // boolean indicator of lane change status
-            bool lane_change_finished_ = false;
+            bool right_lane_change_finished_ = false;
+
+            bool left_lane_change_finished_=false;
+
+            bool right_lane_change_sent_ = false;
+
+            bool left_lane_change_sent_ = false;
 
             // lane change finish point downtrack distance
-            double lane_change_finish_dtd_ = 0.0;
+            double right_lane_change_finish_dtd_ = 0.0;
 
             double left_lane_change_finish_dtd_ = 0.0;
 
-            bool left_lane_change_finish_=false;
-
             bool pull_in_flag_=false;
+
+            double controler_look_ahead_distance_=20;
 
 
             /** lane change option
@@ -372,8 +388,6 @@ namespace emergency_vehicle_strategic
             * \return true or false
             */
             bool is_lanechange_possible(lanelet::Id start_lanelet_id, lanelet::Id target_lanelet_id);
-    
-
             // Unit Test Accessors
             // FRIEND_TEST(EmergencyPulloverStrategicPlugin, );
             // FRIEND_TEST(EmergencyPulloverStrategicPlugin, );

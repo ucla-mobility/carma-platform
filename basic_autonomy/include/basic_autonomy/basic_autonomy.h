@@ -200,7 +200,8 @@ namespace basic_autonomy
      std::vector<PointSpeedPair> create_geometry_profile(const std::vector<cav_msgs::Maneuver> &maneuvers, double max_starting_downtrack, const carma_wm::WorldModelConstPtr &wm,
                                                                    cav_msgs::VehicleState &ending_state_before_buffer,
                                                                     const cav_msgs::VehicleState& state,const GeneralTrajConfig &general_config,
-                                                                   const DetailedTrajConfig &detailed_config);
+                                                                   const DetailedTrajConfig &detailed_config,
+                                                                   double controler_look_ahead_distance);
         /**
      * \brief Converts a set of requested LANE_FOLLOWING maneuvers to point speed limit pairs. 
      * \param maneuvers The list of maneuvers to convert geometry points and calculate associated speed
@@ -263,7 +264,8 @@ namespace basic_autonomy
       */
      std::vector<PointSpeedPair> get_lanechange_points_from_maneuver(const cav_msgs::Maneuver &maneuver, double max_starting_downtrack,
                                                                    const carma_wm::WorldModelConstPtr &wm, cav_msgs::VehicleState &ending_state_before_buffer,
-                                                                   const cav_msgs::VehicleState &state, const GeneralTrajConfig &general_config,const DetailedTrajConfig &detailed_config);
+                                                                   const cav_msgs::VehicleState &state, const GeneralTrajConfig &general_config,const DetailedTrajConfig &detailed_config,
+                                                                   double controler_look_ahead_distance);
      
      /**
       * \brief Creates a vector of lane change points using parameters defined. 
@@ -279,7 +281,7 @@ namespace basic_autonomy
       * \return A vector of geometry points as lanelet::basicpoint2d
       */
      std::vector<lanelet::BasicPoint2d> create_lanechange_geometry(lanelet::Id starting_lane_id, lanelet::Id ending_lane_id, double starting_downtrack, double ending_downtrack,
-                                                            const carma_wm::WorldModelConstPtr &wm, int downsample_ratio, double buffer_ending_downtrack);
+                                                            const carma_wm::WorldModelConstPtr &wm, int downsample_ratio, double buffer_ending_downtrack,double controler_look_ahead_distance);
    
      
      /**
