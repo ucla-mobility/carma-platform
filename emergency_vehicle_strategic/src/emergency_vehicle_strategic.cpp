@@ -692,9 +692,9 @@ namespace emergency_vehicle_strategic
                     target_speed = target_speed*config_.lane_change_speed_adjustment;   //get Speed Limit
                     total_maneuver_length = current_progress + config_.time_step * target_speed;
                     total_maneuver_length = std::min(total_maneuver_length, route_length);
-                    double end_dist = total_maneuver_length;
+                    double end_dist = total_maneuver_length*2;
                     // mark lane change finish position
-                    if (right_lane_change_finish_dtd_ == 0.0) {right_lane_change_finish_dtd_ = total_maneuver_length;}
+                    if (right_lane_change_finish_dtd_ == 0.0) {right_lane_change_finish_dtd_ = current_downtrack_;}
 
                     // log maneuver data
                     ROS_DEBUG_STREAM("Same Lane Maneuver after lane change (right lane not available)! ");
@@ -727,7 +727,7 @@ namespace emergency_vehicle_strategic
                     }
                 } // send plan (lane change vs in lane cruising)
 
-                if (current_downtrack_>right_lane_change_finished_downtrack_+5)
+                if (current_downtrack_>right_lane_change_finished_downtrack_)
                 {
                     right_lane_change_finished_=true;
                     ROS_DEBUG_STREAM("Right lane change has finished and set right_lane_change_finished_ as true!");
@@ -829,7 +829,7 @@ namespace emergency_vehicle_strategic
                     // ROS_DEBUG_STREAM("is LaneChange Finished: " << lane_change_finished_); //TODO: use this variable to determine lane-change status  
                 }
                 // send plan 
-                if (lanechangePossible)
+                if (lanechangePossible && (!left_lane_change_sent_))
                 {
                     ROS_DEBUG_STREAM("Left lane change possible, planning it.. " );
                     cav_msgs::Maneuver maneuver_msg_=composeLaneChangeManeuverMessage(current_progress, lc_end_dist,  
@@ -857,9 +857,9 @@ namespace emergency_vehicle_strategic
                     target_speed = target_speed*config_.lane_change_speed_adjustment;   //get Speed Limit
                     total_maneuver_length = current_progress + config_.time_step * target_speed;
                     total_maneuver_length = std::min(total_maneuver_length, route_length);
-                    double end_dist = total_maneuver_length;
+                    double end_dist = total_maneuver_length*2;
                     // mark lane change finish position
-                    if (left_lane_change_finish_dtd_ == 0.0) {left_lane_change_finish_dtd_ = total_maneuver_length;}
+                    if (left_lane_change_finish_dtd_ == 0.0) {left_lane_change_finish_dtd_ = current_downtrack_;}
 
                     // log maneuver data
                     ROS_DEBUG_STREAM("Same Lane Maneuver after lane change (right lane not available)! ");
