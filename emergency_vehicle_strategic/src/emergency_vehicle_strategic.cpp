@@ -883,7 +883,7 @@ namespace emergency_vehicle_strategic
 
                 } // send plan (lane change vs in lane cruising)
 
-                if (current_downtrack_>left_lane_change_finished_downtrack_+5)
+                if (current_downtrack_>left_lane_change_finished_downtrack_+config_.left_path_safety_distance)
                 {
                     left_lane_change_finished_=true;
                     ROS_DEBUG_STREAM("Left lane change has finished and set left_lane_change_finished_ as true!");

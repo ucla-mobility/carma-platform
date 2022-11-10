@@ -168,7 +168,8 @@ namespace platoon_control
             angVelCmd_ = pp_.getAngularVelocity();
         }else
         {
-            steerCmd_=0;
+            steerCmd_ = pp_.getSteeringAngle(); 
+            // steerCmd_=0;
             angVelCmd_=0;
         }
     }
