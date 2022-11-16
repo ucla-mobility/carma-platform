@@ -30,6 +30,7 @@
 #include "platoon_control_worker.h"
 #include <std_msgs/Bool.h>
 #include <std_msgs/Float32.h>
+#include <visualization_msgs/MarkerArray.h>
 
 
 namespace platoon_control
@@ -123,6 +124,7 @@ namespace platoon_control
 			ros::Publisher ctrl_pub_;
         	ros::Publisher plugin_discovery_pub_;
 			ros::Publisher platoon_info_pub_;
+			ros::Publisher preview_point_pub_;
 			ros::Timer discovery_pub_timer_;
 			ros::Timer control_pub_timer_;
     };

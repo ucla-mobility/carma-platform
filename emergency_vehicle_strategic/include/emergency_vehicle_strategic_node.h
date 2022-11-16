@@ -39,9 +39,9 @@
 #include <cav_msgs/BSM.h>
 #include <carma_wm/WMListener.h>
 #include <functional>
-
 #include "emergency_vehicle_strategic.h"
 #include "emergency_vehicle_strategic_config.h"
+#include <automotive_platform_msgs/TurnSignalCommand.h>
 
 namespace emergency_vehicle_strategic
 {
@@ -64,6 +64,7 @@ class EmergencyVehicleStrategicPluginNode
 
             ros::Publisher discovery_pub = nh.advertise<cav_msgs::Plugin>("plugin_discovery", 1);
             ros::Publisher stop_pub = nh.advertise<std_msgs::Bool>("emergency_stop", 10);
+            ros::Publisher turn_signal_command_pub = nh.advertise<automotive_platform_msgs::TurnSignalCommand>("turn_signal_command", 10);
 
             // load config file
             EmergencyVehicleStrategicPluginConfig config;
@@ -93,7 +94,9 @@ class EmergencyVehicleStrategicPluginNode
             // init worker
             EmergencyVehicleStrategicPlugin worker(wm_, config, 
                                                     [&discovery_pub](auto msg) { discovery_pub.publish(msg); },
-                                                    [&stop_pub](auto msg) { stop_pub.publish(msg); });
+                                                    [&stop_pub](auto msg) { stop_pub.publish(msg);},
+                                                    [&turn_signal_command_pub](auto msg) { turn_signal_command_pub.publish(msg);  
+                                                    });
           
             ros::ServiceServer maneuver_srv_ = nh.advertiseService("plugins/EmergencyVehicleStrategicPlugin/plan_maneuvers",
                                                     &EmergencyVehicleStrategicPlugin::plan_maneuver_cb, &worker);

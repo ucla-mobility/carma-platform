@@ -29,10 +29,12 @@ namespace emergency_vehicle_strategic
     EmergencyVehicleStrategicPlugin::EmergencyVehicleStrategicPlugin(carma_wm::WorldModelConstPtr wm, 
                                                                        EmergencyVehicleStrategicPluginConfig config,
                                                                        PublishPluginDiscoveryCB plugin_discovery_publisher,
-                                                                       StopVehicleCB stop_vehicle_publisher
+                                                                       StopVehicleCB stop_vehicle_publisher,
+                                                                       TurningSignalCB turn_signal_publisher
                                                                        ):
     plugin_discovery_publisher_(plugin_discovery_publisher),
     stop_vehicle_publisher_(stop_vehicle_publisher),
+    turn_signal_publisher_(turn_signal_publisher), 
     wm_(wm),
     config_(config)
     {
@@ -336,10 +338,20 @@ namespace emergency_vehicle_strategic
             auto next_lanelet_id = wm_->getMapRoutingGraph()->following(current_lanelet, false).front().id();
             ROS_DEBUG_STREAM("next_lanelet_id:"<< next_lanelet_id);
 
-            if (pull_in_flag_ && lane_id==0)
+            if (pull_in_flag_ && lane_id==1913)
             {
-                // next_lanelet_id=;
-                /* code */
+                next_lanelet_id=7349;
+            }else if (lane_id==1913)
+            {
+                next_lanelet_id=7399;
+            }
+
+            if (pull_in_flag_ && lane_id==5379)
+            {
+                next_lanelet_id=7661;
+            }else if (lane_id==5379)
+            {
+                next_lanelet_id=7821;
             }
 
             maneuver_msg.lane_following_maneuver.lane_ids.push_back(std::to_string(next_lanelet_id));
@@ -496,6 +508,36 @@ namespace emergency_vehicle_strategic
     void EmergencyVehicleStrategicPlugin::prepass_decision_cb(const std_msgs::StringConstPtr& msg)
     {
         pull_in_flag_=true;
+    }
+
+    void EmergencyVehicleStrategicPlugin::right_turn_signal()
+    {
+        automotive_platform_msgs::TurnSignalCommand msg;
+        ros::Time time = ros::Time::now();
+        msg.header.stamp=time;
+        msg.mode=1;
+        msg.turn_signal=2;
+        turn_signal_publisher_(msg);
+    }
+
+    void EmergencyVehicleStrategicPlugin::left_turn_signal()
+    {
+        automotive_platform_msgs::TurnSignalCommand msg;
+        ros::Time time = ros::Time::now();
+        msg.header.stamp=time;
+        msg.mode=1;
+        msg.turn_signal=1;
+        turn_signal_publisher_(msg);
+    }
+
+    void EmergencyVehicleStrategicPlugin::no_turn_signal()
+    {
+        automotive_platform_msgs::TurnSignalCommand msg;
+        ros::Time time = ros::Time::now();
+        msg.header.stamp=time;
+        msg.mode=1;
+        msg.turn_signal=0;
+        turn_signal_publisher_(msg);
     }
 
     // -------------------------------- Generate maneuver plan --------------------------------
@@ -674,13 +716,15 @@ namespace emergency_vehicle_strategic
                     lane_change_maneuverplan_=resp.new_plan;
                     ROS_DEBUG_STREAM("Saved lane change maneuver plan and waiting to be finished ");
                     right_lane_change_finished_downtrack_=total_maneuver_length+controler_look_ahead_distance_;
-                    ROS_DEBUG_STREAM("right_lane_change_finished_downtrack_ = "<<right_lane_change_finished_downtrack_);                        
+                    ROS_DEBUG_STREAM("right_lane_change_finished_downtrack_ = "<<right_lane_change_finished_downtrack_);
+                    right_turn_signal();                        
                 }
 
                 else if (right_lane_change_sent_  &&  (!right_lane_change_finished_))
                 {
                     resp.new_plan=lane_change_maneuverplan_;
                     ROS_DEBUG_STREAM("Repeat lane change maneuver plan. Awaiting lane change finished ");
+                    right_turn_signal();
                     //need to adjust the end time according to the planed trajectory;
                 }
                 
@@ -715,6 +759,8 @@ namespace emergency_vehicle_strategic
                     resp.new_plan.maneuvers.push_back(maneuver_msg_);
                     resp.new_plan.planning_completion_time=maneuver_msg_.lane_following_maneuver.end_time;
                     ROS_DEBUG_STREAM("resp.new_plan.planning_completion_time = "<<resp.new_plan.planning_completion_time);
+
+                    no_turn_signal();
 
                     // send stop notice once lane following dtd in emergency lane pass threshold (vehicle length)
                     if (current_downtrack_ - right_lane_change_finish_dtd_ >= config_.vehicle_length)
@@ -840,12 +886,16 @@ namespace emergency_vehicle_strategic
                     lane_change_maneuverplan_=resp.new_plan;
                     ROS_DEBUG_STREAM("resp.new_plan.planning_completion_time = "<<resp.new_plan.planning_completion_time);
                     left_lane_change_finished_downtrack_=total_maneuver_length+controler_look_ahead_distance_;
-                    ROS_DEBUG_STREAM("left_lane_change_finished_downtrack_ = "<<left_lane_change_finished_downtrack_);                        
+                    ROS_DEBUG_STREAM("left_lane_change_finished_downtrack_ = "<<left_lane_change_finished_downtrack_); 
+
+                    left_turn_signal();                       
                 }
                 else if (left_lane_change_sent_  &&  (!left_lane_change_finished_))
                 {
                     resp.new_plan=lane_change_maneuverplan_;
                     ROS_DEBUG_STREAM("Repeat left lane change maneuver plan. Awaiting left lane change finished ");
+
+                    left_turn_signal();
                     //need to adjust the end time according to the planed trajectory;
                 }
                 
@@ -880,6 +930,8 @@ namespace emergency_vehicle_strategic
                     resp.new_plan.maneuvers.push_back(maneuver_msg_);
                     resp.new_plan.planning_completion_time=maneuver_msg_.lane_following_maneuver.end_time;
                     ROS_DEBUG_STREAM("resp.new_plan.planning_completion_time = "<<resp.new_plan.planning_completion_time);
+
+                    no_turn_signal();
 
                 } // send plan (lane change vs in lane cruising)
 
@@ -934,6 +986,9 @@ namespace emergency_vehicle_strategic
                 current_progress += dist_diff;
                 time_progress = resp.new_plan.maneuvers.back().lane_following_maneuver.end_time;
                 speed_progress = target_speed;
+
+                no_turn_signal();
+
                 if(current_progress >= total_maneuver_length)
                 {
                     break;

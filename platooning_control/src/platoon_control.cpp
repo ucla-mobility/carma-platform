@@ -81,6 +81,7 @@ namespace platoon_control
         ctrl_pub_ = nh_->advertise<autoware_msgs::ControlCommandStamped>("ctrl_raw", 5, true);
         platoon_info_pub_ = nh_->advertise<cav_msgs::PlatooningInfo>("platooning_info", 1, true);
 
+        preview_point_pub_=nh_->advertise<visualization_msgs::MarkerArray>("control_preview_point", 1, true);
 
         pose_sub_ = nh_->subscribe("current_pose", 1, &PlatoonControlPlugin::pose_cb, this);
 
@@ -148,6 +149,33 @@ namespace platoon_control
 
         cav_msgs::TrajectoryPlanPoint second_trajectory_point = latest_trajectory_.trajectory_points[1]; 
         cav_msgs::TrajectoryPlanPoint lookahead_point = getLookaheadTrajectoryPoint(latest_trajectory_);
+
+
+
+        visualization_msgs::Marker box;
+        box.header.frame_id = "map";
+        box.header.stamp = ros::Time::now();
+        box.lifetime = ros::Duration(1);
+        box.type = visualization_msgs::Marker::CUBE;
+        box.action = visualization_msgs::Marker::ADD;
+        box.id = 0;
+        box.scale.x=0.5;
+        box.scale.y=0.5;
+        box.scale.z=0.5;
+        box.pose.position.x = lookahead_point.x;
+        box.pose.position.y = lookahead_point.y;
+        // box.pose.position.z = pos[2];
+        // box.pose.orientation.x = orientation_.getX();
+        // box.pose.orientation.y = orientation_.getY();
+        // box.pose.orientation.z = orientation_.getZ();
+        // box.pose.orientation.w = orientation_.getW();
+        box.color.r = 0.0f;
+        box.color.g = 1.0f;
+        box.color.b = 0.0f;
+        box.color.a = 1.0;
+        preview_point_pub_.publish(box);
+
+
 
         trajectory_speed_ = getTrajectorySpeed(latest_trajectory_.trajectory_points);
         

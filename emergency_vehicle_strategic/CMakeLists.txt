@@ -37,6 +37,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf2
   tf2_ros
   tf2_geometry_msgs
+  automotive_platform_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -49,7 +50,7 @@ find_package(Boost REQUIRED)
 
 catkin_package(
    INCLUDE_DIRS include
-   CATKIN_DEPENDS carma_utils cav_msgs roscpp std_msgs carma_wm cav_srvs lanelet2_extension
+   CATKIN_DEPENDS carma_utils cav_msgs roscpp std_msgs carma_wm cav_srvs lanelet2_extension automotive_platform_msgs
 )
 
 ###########

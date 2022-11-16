@@ -65,12 +65,13 @@
 #include <std_msgs/Bool.h>
 #include <std_msgs/Float32.h>
 #include <cav_msgs/ManeuverPlan.h>
-
+#include <automotive_platform_msgs/TurnSignalCommand.h>
 
 namespace emergency_vehicle_strategic
 {
     using PublishPluginDiscoveryCB = std::function<void(const cav_msgs::Plugin&)>;
     using StopVehicleCB = std::function<void(const std_msgs::Bool&)>;
+    using TurningSignalCB = std::function<void(const automotive_platform_msgs::TurnSignalCommand&)>;
 
     class EmergencyVehicleStrategicPlugin
     {
@@ -89,7 +90,8 @@ namespace emergency_vehicle_strategic
             EmergencyVehicleStrategicPlugin(carma_wm::WorldModelConstPtr wm, 
                                              EmergencyVehicleStrategicPluginConfig config,
                                              PublishPluginDiscoveryCB plugin_discovery_publisher,
-                                             StopVehicleCB stop_vehicle_publisher);
+                                             StopVehicleCB stop_vehicle_publisher,
+                                             TurningSignalCB turn_signal_publisher);
 
             /**
             * \brief Callback for the georeference
@@ -242,6 +244,10 @@ namespace emergency_vehicle_strategic
 
             void prepass_decision_cb(const std_msgs::StringConstPtr& msg);
 
+            void right_turn_signal();
+            void left_turn_signal();
+            void no_turn_signal();
+
             void controller_setting_cb(std_msgs::Float32 msg);
             
             // public global variable
@@ -270,6 +276,8 @@ namespace emergency_vehicle_strategic
 
             // publish stop vehicle call back
             StopVehicleCB stop_vehicle_publisher_;
+
+            TurningSignalCB turn_signal_publisher_;
             
             // pointer to the actual wm object
             carma_wm::WorldModelConstPtr wm_;
