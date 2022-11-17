@@ -31,6 +31,7 @@
 #include <std_msgs/Bool.h>
 #include <std_msgs/Float32.h>
 #include <visualization_msgs/MarkerArray.h>
+#include <visualization_msgs/Marker.h>
 
 
 namespace platoon_control
