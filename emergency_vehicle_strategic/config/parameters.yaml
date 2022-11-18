@@ -2,7 +2,7 @@
 vehicleID: "default_id"            
 lane_change_desired_steps: 1    
 maxCrosstrackError: 2.0
-time_step: 50.0
+time_step: 10.0
 lane_change_speed_adjustment: 0.7 
 maxLaneChangeDist: 22.0
 stopping_deceleration: 2.5
