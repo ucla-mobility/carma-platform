@@ -99,11 +99,22 @@ namespace basic_autonomy
 
                 if (maneuver.lane_following_maneuver.lane_ids.size()>1)
                 {
-                    lane_id = stoi(maneuver.lane_following_maneuver.lane_ids[1]);
-                    ROS_DEBUG_STREAM("more extracted id: " << lane_id);
-                    new_lanelet = wm->getMap()->laneletLayer.get(lane_id);
-                    lanelets.push_back(new_lanelet);
+                    for (int i = 1; i < maneuver.lane_following_maneuver.lane_ids.size(); ++i)
+                    {
+                        lane_id = stoi(maneuver.lane_following_maneuver.lane_ids[i]);
+                        ROS_DEBUG_STREAM("more extracted id: " << lane_id<<" , i = "<<i);
+                        new_lanelet = wm->getMap()->laneletLayer.get(lane_id);
+                        lanelets.push_back(new_lanelet);
+                    }
                 }
+
+                // if (maneuver.lane_following_maneuver.lane_ids.size()>1)
+                // {
+                //     lane_id = stoi(maneuver.lane_following_maneuver.lane_ids[1]);
+                //     ROS_DEBUG_STREAM("more extracted id: " << lane_id);
+                //     new_lanelet = wm->getMap()->laneletLayer.get(lane_id);
+                //     lanelets.push_back(new_lanelet);
+                // }
             } 
 
 

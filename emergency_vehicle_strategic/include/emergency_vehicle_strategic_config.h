@@ -75,6 +75,7 @@ namespace emergency_vehicle_strategic
 
     double left_path_safety_distance    = 40.0;    // m; Note: 20m with trailer; 7m if only tractor; 5m for Lincoln 
 
+    double following_lanelets_number    = 3;
 
     friend std::ostream& operator<<(std::ostream& output, const EmergencyVehicleStrategicPluginConfig& c)
     {
@@ -94,6 +95,7 @@ namespace emergency_vehicle_strategic
             << "em_lane_maintain_ratio: " << c.em_lane_maintain_ratio << std::endl
             << "reduced_lane_follow_speed: " << c.reduced_lane_follow_speed << std::endl
             << "left_path_safety_distance: " << c.left_path_safety_distance << std::endl
+            << "following_lanelets_number: " << c.following_lanelets_number << std::endl
 
 
             << "}" << std::endl; 

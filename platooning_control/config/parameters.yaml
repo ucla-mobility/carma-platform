@@ -14,7 +14,7 @@ integratorMin: -30
 wheelBase: 2.84
 lowpassGain: 0.5 #1.0
 lookaheadRatio: 1.5 #1.5
-minLookaheadDist: 20.0 #15
+minLookaheadDist: 30.0 #15
 correctionAngle: 0.00 #-0.022 to turn right
 integratorMax_pp: 0.1
 integratorMin_pp: -0.1

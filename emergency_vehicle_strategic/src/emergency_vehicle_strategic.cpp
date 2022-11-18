@@ -337,7 +337,6 @@ namespace emergency_vehicle_strategic
 
             auto next_lanelet_id = wm_->getMapRoutingGraph()->following(current_lanelet, false).front().id();
             ROS_DEBUG_STREAM("next_lanelet_id:"<< next_lanelet_id);
-
             if (pull_in_flag_ && lane_id==1913)
             {
                 next_lanelet_id=7349;
@@ -353,8 +352,23 @@ namespace emergency_vehicle_strategic
             {
                 next_lanelet_id=7821;
             }
-
+            ROS_DEBUG_STREAM("next_lanelet_id:"<< next_lanelet_id);
             maneuver_msg.lane_following_maneuver.lane_ids.push_back(std::to_string(next_lanelet_id));
+
+            for (int i = 0; i < config_.following_lanelets_number; ++i)
+            {
+                lanelet::ConstLanelet temp_lanelet = wm_->getMap()->laneletLayer.get(next_lanelet_id);
+                if (!wm_->getMapRoutingGraph()->following(temp_lanelet, false).empty())
+                {
+                    next_lanelet_id = wm_->getMapRoutingGraph()->following(temp_lanelet, false).front().id();
+                    maneuver_msg.lane_following_maneuver.lane_ids.push_back(std::to_string(next_lanelet_id));
+                }
+                else
+                {
+                    ROS_DEBUG_STREAM("No following lanelets in the added for loop");
+                }
+            }
+
         }
         else
         {
@@ -507,6 +521,7 @@ namespace emergency_vehicle_strategic
 
     void EmergencyVehicleStrategicPlugin::prepass_decision_cb(const std_msgs::StringConstPtr& msg)
     {
+        ROS_DEBUG_STREAM("pull_in_flag_ = "<<pull_in_flag_);
         pull_in_flag_=true;
     }
 
